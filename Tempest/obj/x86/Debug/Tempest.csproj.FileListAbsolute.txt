@@ -1,6 +1,0 @@
-e:\Tempest\Tempest\bin\Debug\Tempest.exe
-e:\Tempest\Tempest\bin\Debug\Tempest.pdb
-e:\Tempest\Tempest\obj\x86\Debug\Tempest.exe
-e:\Tempest\Tempest\obj\x86\Debug\Tempest.pdb
-e:\TCopy\Tempest\obj\x86\Debug\Tempest.exe
-e:\TCopy\Tempest\obj\x86\Debug\Tempest.pdb
