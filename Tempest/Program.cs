@@ -79,7 +79,7 @@ namespace Tempest
                 if (i != pieces.Length - 1)
                     Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].name, string.Format("({0}:{1})", length.Minutes, length.Seconds));
                 else
-                    Console.WriteLine("{0}. {1} {2}.", i + 1, pieces[i].name, string.Format("({0}:{1})", length.Minutes, length.Seconds));
+                    Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].name, string.Format("({0}:{1})", length.Minutes, length.Seconds));
             }
         }
 
