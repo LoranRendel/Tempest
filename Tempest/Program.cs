@@ -73,11 +73,13 @@ namespace Tempest
             Console.WriteLine("Для прослушивания доступны следующие мелодии:\n");
             for (int i = 0; i < pieces.Length; i++)
             {
+                int lm = GetSongLength(pieces[i]);
+                TimeSpan length = new TimeSpan(0,0,0,lm/1000, lm-lm/1000*1000);                
                 Console.CursorLeft = 6;
                 if (i != pieces.Length - 1)
-                    Console.WriteLine("{0}. {1};", i + 1, pieces[i].name);
+                    Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].name, string.Format("({0}:{1})", length.Minutes, length.Seconds));
                 else
-                    Console.WriteLine("{0}. {1}.\n", i + 1, pieces[i].name);
+                    Console.WriteLine("{0}. {1} {2}.", i + 1, pieces[i].name, string.Format("{0}:{1}", length.Minutes, length.Seconds));
             }
         }
 
@@ -208,6 +210,15 @@ namespace Tempest
                 audioFileStream.Close();
             }
             Console.CursorVisible = true;
+        }
+
+        static int GetSongLength(Song s)
+        {            
+            int result = 0;
+            NotationTranstalor.Note[] notes = translator.TranslateNotation(s.text);
+            foreach (NotationTranstalor.Note n in notes)
+                result += n.Duration;
+            return result;
         }
 
         static Song[] ReadPlayList(string file)
