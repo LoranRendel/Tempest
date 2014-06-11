@@ -10,3 +10,4 @@
 *.user
 *.sln.docstates
 Tempest/bin/*
+Tempest/obj/*
