@@ -111,12 +111,33 @@ namespace Tempest
                     case "open":
                         OpenPlayList();
                         break;
+                    case "reload":
+                        StreamReader r = playList.OpenText();
+                        pieces = ReadPlayList(r.ReadToEnd());
+                        r.Close();
+                        Console.WriteLine("Плейлист перезагружен");
+                        PrintSongList();
+                        break;
+                    case "play":
+                        Console.Write(">>> ");
+                        Song enteredSong = new Song() { text = Console.ReadLine() };
+                        try
+                        {
+                            PlayPiece(enteredSong);
+                        }
+                        catch
+                        {
+                            Console.CursorLeft = 4;
+                            Console.WriteLine("Не удалось воспроизвести мелодию из-за ошибки в записи");
+                        }
+                        break;
                     case "q":
                         running = false;
                         return;
                         
                 }
             }            
+           
         }
 
         static Thread PrintIndicatorAsync(int left, int frameGap)
