@@ -4,6 +4,7 @@ using System.Text;
 using System.IO;
 using System.Windows.Forms;
 using System.Media;
+using System.Threading;
 
 namespace Tempest
 {
@@ -76,7 +77,7 @@ namespace Tempest
                 if (i != pieces.Length - 1)
                     Console.WriteLine("{0}. {1};", i + 1, pieces[i].name);
                 else
-                    Console.WriteLine("{0}. {1}.", i + 1, pieces[i].name);
+                    Console.WriteLine("{0}. {1}.\n", i + 1, pieces[i].name);
             }
         }
 
@@ -87,10 +88,12 @@ namespace Tempest
             int pieceNumber = 0;
             Console.CursorLeft = 4;
             Console.Write("Проиграть мелодию: ");
-            answer = Console.ReadLine();
+            answer = Console.ReadLine(); 
             if (int.TryParse(answer, out pieceNumber) && pieceNumber <= pieces.Length && pieceNumber > 0)
             {
-                PlayPiece(pieces[pieceNumber - 1]);                
+                Thread indicator = PrintIndicatorAsync(4 + "Проиграть мелодию: ".Length+answer.Length+1, 100);
+                PlayPiece(pieces[pieceNumber - 1]);
+                indicator.Abort();
             }
             else
             {
@@ -99,11 +102,11 @@ namespace Tempest
                 {
                     case "sysb":
                         systemBeeper = true;
-                        Console.WriteLine("Теперь звуки будут впроизводиться через системный бипер");
+                        Console.WriteLine("Теперь звуки будут воспроизводиться через системный бипер");
                         break;
                     case "wav":
                         systemBeeper = false;
-                        Console.WriteLine("Теперь звуки будут впроизводиться при помощи wav-файла");
+                        Console.WriteLine("Теперь звуки будут воспроизводиться при помощи wav-файла");
                         break;
                     case "open":
                         OpenPlayList();
@@ -116,9 +119,45 @@ namespace Tempest
             }            
         }
 
+        static Thread PrintIndicatorAsync(int left, int frameGap)
+        {
+            Thread indicatorThread = new Thread(new ParameterizedThreadStart(PrintWorkingIndicator));
+            int[] parametrs = new int[] { left, frameGap };
+            indicatorThread.Start(parametrs);
+            return indicatorThread;
+        }
+        static void PrintWorkingIndicator(object parameters)
+        {
+            int[] pp = (int[])parameters;
+            int top = Console.CursorTop - 1;
+            int left = pp[0];
+            int frameGap = pp[1];
+            char[] frames = new char[] { '|', '/', '-', '\\' };            
+            for(int i =0; i<frames.Length; i++)
+            {
+                try
+                {
+                    Console.CursorLeft = left;
+                    Console.CursorTop = top;
+                    Console.Write(frames[i].ToString());
+                    Thread.Sleep(frameGap);
+                    if (i == frames.Length - 1)
+                        i = -1;
+                }
+                catch
+                {
+                    i = frames.Length;
+                    Console.CursorLeft = left;
+                    Console.CursorTop = top;
+                    Console.WriteLine(" ");
+                    continue;
+                }
+            }
+        }
+
         static void PlayPiece(Song piece)
         {
-            Console.CursorVisible = false;
+            //Console.CursorVisible = false;
             NotationTranstalor.Note[] notes = translator.TranslateNotation(piece.text);
             if (systemBeeper)
             {
