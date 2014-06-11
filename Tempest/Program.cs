@@ -27,7 +27,7 @@ namespace Tempest
             {
                 StreamReader reader = playList.OpenText();
                 pieces = ReadPlayList(reader.ReadToEnd());
-                reader.Close();                
+                reader.Close();
                 PrintSongList();
             }
             while (running)
@@ -49,11 +49,11 @@ namespace Tempest
                 pieces = ReadPlayList(reader.ReadToEnd());
                 reader.Close();
                 PrintSongList();
-            }      
+            }
         }
 
         static void ShowWelcomeScreen()
-        {            
+        {
             string welcomeText = " Подобие музыкального проигрывателя v 0.0004";
             int screenCenter = Console.WindowWidth / 2;
             Console.CursorLeft = screenCenter - (welcomeText.Length / 2);
@@ -88,10 +88,10 @@ namespace Tempest
             int pieceNumber = 0;
             Console.CursorLeft = 4;
             Console.Write("Проиграть мелодию: ");
-            answer = Console.ReadLine(); 
+            answer = Console.ReadLine();
             if (int.TryParse(answer, out pieceNumber) && pieceNumber <= pieces.Length && pieceNumber > 0)
             {
-                Thread indicator = PrintIndicatorAsync(4 + "Проиграть мелодию: ".Length+answer.Length+1, 100);
+                Thread indicator = PrintIndicatorAsync(4 + "Проиграть мелодию: ".Length + answer.Length + 1, 100);
                 PlayPiece(pieces[pieceNumber - 1]);
                 indicator.Abort();
             }
@@ -134,10 +134,10 @@ namespace Tempest
                     case "q":
                         running = false;
                         return;
-                        
+
                 }
-            }            
-           
+            }
+
         }
 
         static Thread PrintIndicatorAsync(int left, int frameGap)
@@ -149,28 +149,31 @@ namespace Tempest
         }
         static void PrintWorkingIndicator(object parameters)
         {
+            bool working = true;
             int[] pp = (int[])parameters;
             int top = Console.CursorTop - 1;
             int left = pp[0];
             int frameGap = pp[1];
-            char[] frames = new char[] { '|', '/', '-', '\\' };            
-            for(int i =0; i<frames.Length; i++)
+            char[] frames = new char[] { '|', '/', '-', '\\' };
+            while (working)
             {
                 try
                 {
-                    Console.CursorLeft = left;
-                    Console.CursorTop = top;
-                    Console.Write(frames[i].ToString());
-                    Thread.Sleep(frameGap);
-                    if (i == frames.Length - 1)
-                        i = -1;
+                    for (int i = 0; i < frames.Length; i++)
+                    {
+
+                        Console.CursorLeft = left;
+                        Console.CursorTop = top;
+                        Console.Write(frames[i].ToString());
+                        Thread.Sleep(frameGap);
+                    }
                 }
                 catch
-                {
-                    i = frames.Length;
+                {                   
                     Console.CursorLeft = left;
                     Console.CursorTop = top;
                     Console.WriteLine(" ");
+                    working = false;
                     continue;
                 }
             }
@@ -201,7 +204,7 @@ namespace Tempest
                 audioFile.saveFile(audioFileStream);
                 audioFileStream.Position = 0;
                 SoundPlayer player = new SoundPlayer(audioFileStream);
-                player.PlaySync();                
+                player.PlaySync();
                 audioFileStream.Close();
             }
             Console.CursorVisible = true;
