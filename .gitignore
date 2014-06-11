@@ -9,3 +9,4 @@
 *.suo
 *.user
 *.sln.docstates
+Tempest/bin/*
