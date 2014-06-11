@@ -86,7 +86,6 @@ namespace Tempest
         static void PlayerPrompt()
         {
             string answer = string.Empty;
-
             int pieceNumber = 0;
             Console.CursorLeft = 4;
             Console.Write("Проиграть мелодию: ");
@@ -96,6 +95,8 @@ namespace Tempest
                 Thread indicator = PrintIndicatorAsync(4 + "Проиграть мелодию: ".Length + answer.Length + 1, 100);
                 PlayPiece(pieces[pieceNumber - 1]);
                 indicator.Abort();
+                //interface bug
+                while (indicator.IsAlive) ;
             }
             else
             {
