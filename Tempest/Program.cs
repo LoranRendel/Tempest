@@ -20,10 +20,10 @@ namespace Tempest
 
         [STAThread]
         static int Main()
-        {            
+        {
             ShowWelcomeScreen();
-            OpenPlayList(defaultPlayListPath);           
-            PrintPlayList();            
+            OpenPlayList(defaultPlayListPath);
+            PrintPlayList();
             while (running)
             {
                 PlayerPrompt();
@@ -77,16 +77,16 @@ namespace Tempest
                 result = 0;
             if (loaded == true && okayPressed == false)
                 result = 1;
-            if(loaded == false && okayPressed == true)
+            if (loaded == false && okayPressed == true)
                 result = 2;
-            if(loaded == true && okayPressed == true)
+            if (loaded == true && okayPressed == true)
                 result = 3;
             if (loaded)
                 Console.Title = playListFile.FullName;
             else
                 Console.Title = windowTitle;
             return result;
-        }        
+        }
 
         static void ShowWelcomeScreen()
         {
@@ -113,7 +113,7 @@ namespace Tempest
             Console.CursorLeft = 4;
             Console.WriteLine("Для прослушивания доступны следующие мелодии:\n");
             for (int i = 0; i < pieces.Length; i++)
-            {                
+            {
                 int lm = GetSongLength(pieces[i]);
                 TimeSpan length = new TimeSpan(0, 0, 0, lm / 1000, lm - lm / 1000 * 1000);
                 Console.CursorLeft = 6;
@@ -136,14 +136,15 @@ namespace Tempest
             Console.CursorLeft = left;
             Console.Write(promptText);
             answer = Console.ReadLine();
-            
+
             if (int.TryParse(answer, out pieceNumber) && pieces != null && pieceNumber <= pieces.Length && pieceNumber > 0)
             {
                 Thread indicator = PrintIndicatorAsync(left + promptText.Length + answer.Length + 1, 100);
-                PlayPiece(pieces[pieceNumber - 1], Program.systemBeeper, indicator);             
+                PlayPiece(pieces[pieceNumber - 1], Program.systemBeeper, indicator);
+                
             }
             else
-            {               
+            {
                 switch (answer)
                 {
                     case "s":
@@ -164,7 +165,7 @@ namespace Tempest
                         break;
                     case "reload":
                         if (Program.pieces == null)
-                           PrintNotification("Плейлист не был загружен, поэтому его невозможно перезагрузить", leftForNotifications);
+                            PrintNotification("Плейлист не был загружен, поэтому его невозможно перезагрузить", leftForNotifications);
                         else
                         {
                             OpenPlayList(Program.playListFile.FullName);
@@ -175,8 +176,8 @@ namespace Tempest
                     case "play":
                         Console.CursorLeft = left;
                         Console.Write(">>> ");
-                        Song enteredSong = new Song() { text = Console.ReadLine() };                        
-                        PlayPiece(enteredSong, Program.systemBeeper, null);                        
+                        Song enteredSong = new Song() { text = Console.ReadLine() };
+                        PlayPiece(enteredSong, Program.systemBeeper, null);
                         break;
                     case "q":
                     case "exit":
@@ -205,30 +206,29 @@ namespace Tempest
             char[] frames = new char[] { '|', '/', '-', '\\' };
             while (working)
             {
-                try
-                {
-                    for (int i = 0; i < frames.Length; i++)
-                    {
-
-                        Console.CursorLeft = left;
-                        Console.CursorTop = top;
-                        Console.Write(frames[i].ToString());
-                        Thread.Sleep(frameGap);
-                    }
-                }
-                catch
+                for (int i = 0; i < frames.Length; i++)
                 {
                     Console.CursorLeft = left;
                     Console.CursorTop = top;
-                    Console.WriteLine(" ");
-                    working = false;
-                    continue;
+                    try
+                    {                       
+                        Console.Write(frames[i].ToString());
+                        Thread.Sleep(frameGap);
+                    }
+                    catch(ThreadAbortException ex)
+                    {
+                        Console.CursorLeft = left;
+                        Console.CursorTop = top;
+                        Console.WriteLine(" ");
+                        working = false;
+                        break;
+                    }
                 }
             }
         }
 
         static void PlayPiece(Song piece, bool systemBeeper, Thread indicatorThread)
-        {            
+        {
             NotationTranstalor.Note[] notes = null;
             try
             {
@@ -236,7 +236,7 @@ namespace Tempest
             }
             catch
             {
-                if(indicatorThread != null)
+                if (indicatorThread != null)
                     indicatorThread.Abort();
                 PrintNotification("Не удалось воспроизвести мелодию из-за ошибки в записи", 6);
                 return;
@@ -267,8 +267,7 @@ namespace Tempest
             }
             if (indicatorThread != null)
             {
-                indicatorThread.Abort();
-                while (indicatorThread.IsAlive) ;
+                indicatorThread.Abort();               
             }
         }
 
