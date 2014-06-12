@@ -5,16 +5,16 @@ using System.Runtime.InteropServices;
 
 namespace Tempest
 {
-    class NotationTranstalor
+    static class NotationTranstalor
     {
-        private Dictionary<string, int> generalKeyNumbers;   
+        private static Dictionary<string, int> generalKeyNumbers;   
 
-        public NotationTranstalor()
+        static NotationTranstalor()
         {
             Initialize();            
         }
 
-        private void Initialize()
+        private static void Initialize()
         {
             generalKeyNumbers = new Dictionary<string, int>();
             generalKeyNumbers.Add("C", 0);
@@ -36,7 +36,7 @@ namespace Tempest
             generalKeyNumbers.Add("B", 11);
         }                
 
-        private int GetKeyNumber(string key, int octaveNumber)
+        private static int GetKeyNumber(string key, int octaveNumber)
         {            
             int keyNumber;
             try
@@ -50,8 +50,10 @@ namespace Tempest
             return 12 * octaveNumber + keyNumber;
         }
 
-        public Note[] TranslateNotation(string notation)
+        public static Note[] TranslateNotation(string notation)
         {
+            if (notation == null)
+                throw new ArgumentNullException();
             //NOTATION FORMAT:
             //[TEMP] [NOTE1-DURATION] [NOTE2-DURATION] [NOTEN-DURATION]
             //TEMP: TEMP + BPM. Example: TEMP120 - tempo is 120 beats per minute

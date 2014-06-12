@@ -15,42 +15,73 @@ namespace Tempest
         static bool running = true;
         static bool systemBeeper = false;
         static Song[] pieces;
-        static FileInfo playList = new FileInfo(defaultPlayListPath);
-        static NotationTranstalor translator = new NotationTranstalor();
+        static FileInfo playListFile = null;
+
         [STAThread]
         static int Main()
-        {
+        {            
             ShowWelcomeScreen();
-            if (!playList.Exists)
-                OpenPlayList();
-            else
-            {
-                StreamReader reader = playList.OpenText();
-                pieces = ReadPlayList(reader.ReadToEnd());
-                reader.Close();
-                PrintSongList();
-            }
+            OpenPlayList(defaultPlayListPath);           
+            PrintPlayList();            
             while (running)
             {
                 PlayerPrompt();
             }
             return 0;
         }
-
-        private static void OpenPlayList()
+        /// <summary>
+        /// Opens and loads a playlist
+        /// </summary>
+        /// <param name="path">A path to a playlist file, if it's null, an OpenFileDialogue is shown.</param>
+        /// <returns>Result of operation: 
+        /// [0] the playlist wasn't loaded and user didn't press OK button; 
+        /// [1] the playlist was loaded and user didn't press OK button;
+        /// [2] the playlist wasn't loaded and user pressed OK button;
+        /// [3] the playlist was loaded and user pressed OK buttonon.
+        /// </returns>
+        private static byte OpenPlayList(string path)
         {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Title = "Выберите файл со списком мелодий";
-            ofd.Multiselect = false;
-            if (ofd.ShowDialog() == DialogResult.OK)
+            StreamReader reader = null;
+            bool okayPressed = false;
+            bool loaded = false;
+            if (path == null)
             {
-                playList = new FileInfo(ofd.FileName);
-                StreamReader reader = playList.OpenText();
-                pieces = ReadPlayList(reader.ReadToEnd());
-                reader.Close();
-                PrintSongList();
+                OpenFileDialog ofd = new OpenFileDialog();
+                ofd.Title = "Выберите файл со списком мелодий";
+                ofd.Multiselect = false;
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    playListFile = new FileInfo(ofd.FileName);
+                    reader = playListFile.OpenText();
+                    pieces = ReadPlayList(reader.ReadToEnd());
+                    reader.Close();
+                    okayPressed = true;
+                }
             }
-        }
+            else
+            {
+                playListFile = new FileInfo(path);
+                if (playListFile.Exists)
+                {
+                    reader = playListFile.OpenText();
+                    pieces = ReadPlayList(reader.ReadToEnd());
+                    reader.Close();
+                }
+                else
+                    return OpenPlayList(null);
+            }
+            loaded = pieces != null;
+            byte result = 0;
+            if (loaded == false && okayPressed == false)
+                result = 0;
+            if (loaded == true && okayPressed == false)
+                result = 1;
+            if(loaded == false && okayPressed == true)
+                result = 2;
+            if(loaded == true && okayPressed == true)
+                result = 3;           
+            return result;
+        }        
 
         static void ShowWelcomeScreen()
         {
@@ -65,16 +96,20 @@ namespace Tempest
             Console.Write("\n\n");
         }
 
-        static void PrintSongList()
+        static void PrintPlayList()
         {
             if (pieces == null)
+            {
+                Console.CursorLeft = 6;
+                Console.WriteLine("Плейлист отсутствует или имеет неправильный формат");
                 return;
+            }
             Console.CursorLeft = 4;
             Console.WriteLine("Для прослушивания доступны следующие мелодии:\n");
             for (int i = 0; i < pieces.Length; i++)
             {
                 int lm = GetSongLength(pieces[i]);
-                TimeSpan length = new TimeSpan(0,0,0,lm/1000, lm-lm/1000*1000);                
+                TimeSpan length = new TimeSpan(0, 0, 0, lm / 1000, lm - lm / 1000 * 1000);
                 Console.CursorLeft = 6;
                 if (i != pieces.Length - 1)
                     Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].name, string.Format("({0}:{1})", length.Minutes, length.Seconds));
@@ -86,47 +121,60 @@ namespace Tempest
         static void PlayerPrompt()
         {
             string answer = string.Empty;
+
+            string promptText = "Проиграть мелодию: ";
+            int left = 4;
+            int leftForNotifications = 6;
+
             int pieceNumber = 0;
-            Console.CursorLeft = 4;
-            Console.Write("Проиграть мелодию: ");
+            Console.CursorLeft = left;
+            Console.Write(promptText);
             answer = Console.ReadLine();
-            if (int.TryParse(answer, out pieceNumber) && pieceNumber <= pieces.Length && pieceNumber > 0)
+            if (int.TryParse(answer, out pieceNumber) && pieces != null && pieceNumber <= pieces.Length && pieceNumber > 0)
             {
-                Thread indicator = PrintIndicatorAsync(4 + "Проиграть мелодию: ".Length + answer.Length + 1, 100);
-                PlayPiece(pieces[pieceNumber - 1]);
+                Thread indicator = PrintIndicatorAsync(left + promptText.Length + answer.Length + 1, 100);
+                PlayPiece(pieces[pieceNumber - 1], Program.systemBeeper);
                 indicator.Abort();
                 //interface bug
                 while (indicator.IsAlive) ;
             }
             else
             {
-                Console.CursorLeft = 6;
+                Console.CursorLeft = leftForNotifications;
                 switch (answer)
                 {
+                    case "s":
                     case "sysb":
                         systemBeeper = true;
                         Console.WriteLine("Теперь звуки будут воспроизводиться через системный бипер");
                         break;
+                    case "w":
                     case "wav":
                         systemBeeper = false;
                         Console.WriteLine("Теперь звуки будут воспроизводиться при помощи wav-файла");
                         break;
+                    case "o":
                     case "open":
-                        OpenPlayList();
+                        byte result = OpenPlayList(null);
+                        if (result == 3 || result == 2)
+                            PrintPlayList();
                         break;
                     case "reload":
-                        StreamReader r = playList.OpenText();
-                        pieces = ReadPlayList(r.ReadToEnd());
-                        r.Close();
-                        Console.WriteLine("Плейлист перезагружен");
-                        PrintSongList();
+                        if (Program.pieces == null)
+                            Console.WriteLine("Плейлист не был загружен, поэтому его невозможно перезагрузить");
+                        else
+                        {
+                            OpenPlayList(Program.playListFile.FullName);
+                            Console.WriteLine("Плейлист перезагружен");
+                            PrintPlayList();
+                        }
                         break;
                     case "play":
                         Console.Write(">>> ");
                         Song enteredSong = new Song() { text = Console.ReadLine() };
                         try
                         {
-                            PlayPiece(enteredSong);
+                            PlayPiece(enteredSong, Program.systemBeeper);
                         }
                         catch
                         {
@@ -135,9 +183,10 @@ namespace Tempest
                         }
                         break;
                     case "q":
+                    case "exit":
+                    case "quit":
                         running = false;
                         return;
-
                 }
             }
 
@@ -172,7 +221,7 @@ namespace Tempest
                     }
                 }
                 catch
-                {                   
+                {
                     Console.CursorLeft = left;
                     Console.CursorTop = top;
                     Console.WriteLine(" ");
@@ -182,10 +231,10 @@ namespace Tempest
             }
         }
 
-        static void PlayPiece(Song piece)
+        static void PlayPiece(Song piece, bool systemBeeper)
         {
             //Console.CursorVisible = false;
-            NotationTranstalor.Note[] notes = translator.TranslateNotation(piece.text);
+            NotationTranstalor.Note[] notes = NotationTranstalor.TranslateNotation(piece.text);
             if (systemBeeper)
             {
                 foreach (NotationTranstalor.Note note in notes)
@@ -198,13 +247,13 @@ namespace Tempest
             }
             else
             {
-                Wave audioFile = new Wave(22050);
+                Wave audioFileGenerator = new Wave(22050);
                 foreach (NotationTranstalor.Note note in notes)
                 {
-                    audioFile.addWave((int)note.Frequncy, note.Duration);
+                    audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
                 }
                 MemoryStream audioFileStream = new MemoryStream();
-                audioFile.saveFile(audioFileStream);
+                audioFileGenerator.saveFile(audioFileStream);
                 audioFileStream.Position = 0;
                 SoundPlayer player = new SoundPlayer(audioFileStream);
                 player.PlaySync();
@@ -214,42 +263,53 @@ namespace Tempest
         }
 
         static int GetSongLength(Song s)
-        {            
+        {
             int result = 0;
-            NotationTranstalor.Note[] notes = translator.TranslateNotation(s.text);
+            NotationTranstalor.Note[] notes = NotationTranstalor.TranslateNotation(s.text);
             foreach (NotationTranstalor.Note n in notes)
                 result += n.Duration;
             return result;
         }
 
-        static Song[] ReadPlayList(string file)
+        static Song[] ReadPlayList(string fileText)
         {
-            string[] splitted = file.Split('\n');
+            string[] splitted = fileText.Split('\n');
             Song[] pieces = new Song[splitted.Length];
             for (int i = 0; i < splitted.Length; i++)
             {
-                //Is it proper song?
+                //Is it a proper song?
                 splitted[i] = splitted[i].Replace('\r', '\0');
                 if (splitted[i].Contains("(") && splitted[i].Contains(")"))
                 {
-                    int open = 0, close = 0;
+                    int open = 0, close = 0, openCount = 0, closeCount = 0;
                     for (int j = 0; j < splitted[i].Length; j++)
                     {
                         if (splitted[i][j] == '(')
+                        {
+                            openCount++;
                             open = j;
+                        }
                         if (splitted[i][j] == ')')
+                        {
+                            closeCount++;
                             close = j;
+                        }
                     }
                     string text, name;
-                    if (open < close)
+                    if (open < close && openCount == 1 && closeCount == 1)
                     {
                         text = splitted[i].Substring(open + 1, close - open - 1);
                         name = splitted[i].Substring(0, open);
                         pieces[i].text = text;
                         pieces[i].name = name;
                     }
+                    else
+                        return null;
 
                 }
+                else
+                    return null;
+
             }
             return pieces;
         }
@@ -257,8 +317,8 @@ namespace Tempest
         struct Song
         {
             public string name;
+            public string author;
             public string text;
         }
-
     }
 }
