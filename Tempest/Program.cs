@@ -12,6 +12,9 @@ namespace Tempest
     class Program
     {
         static string windowTitle = "Tempest";
+        static bool playing = false;
+        static char[] frames = new char[] { '|', '/', '-', '\\' };
+        static EventWaitHandle auto = new EventWaitHandle(false, EventResetMode.AutoReset);
         static string defaultPlayListPath = "songs.txt";
         static bool running = true;
         static bool systemBeeper = false;
@@ -38,7 +41,7 @@ namespace Tempest
         /// [0] the playlist wasn't loaded and user didn't press OK button; 
         /// [1] the playlist was loaded and user didn't press OK button;
         /// [2] the playlist wasn't loaded and user pressed OK button;
-        /// [3] the playlist was loaded and user pressed OK buttonon.
+        /// [3] the playlist was loaded and user pressed OK button.
         /// </returns>
         private static byte OpenPlayList(string path)
         {
@@ -139,9 +142,8 @@ namespace Tempest
 
             if (int.TryParse(answer, out pieceNumber) && pieces != null && pieceNumber <= pieces.Length && pieceNumber > 0)
             {
-                Thread indicator = PrintIndicatorAsync(left + promptText.Length + answer.Length + 1, 100);
-                PlayPiece(pieces[pieceNumber - 1], Program.systemBeeper, indicator);
-                
+
+                PlayPiece(pieces[pieceNumber - 1], Program.systemBeeper, left+promptText.Length+answer.Length+1);
             }
             else
             {
@@ -175,9 +177,11 @@ namespace Tempest
                         break;
                     case "play":
                         Console.CursorLeft = left;
-                        Console.Write(">>> ");
+                        promptText = ">>> ";
+                        Console.Write(promptText);
+                        int cl = Console.CursorLeft;
                         Song enteredSong = new Song() { text = Console.ReadLine() };
-                        PlayPiece(enteredSong, Program.systemBeeper, null);
+                        PlayPiece(enteredSong, Program.systemBeeper, left + promptText.Length + enteredSong.text.Length + 1);
                         break;
                     case "q":
                     case "exit":
@@ -189,46 +193,43 @@ namespace Tempest
 
         }
 
-        static Thread PrintIndicatorAsync(int left, int frameGap)
-        {
-            Thread indicatorThread = new Thread(new ParameterizedThreadStart(PrintWorkingIndicator));
-            int[] parametrs = new int[] { left, frameGap };
-            indicatorThread.Start(parametrs);
-            return indicatorThread;
-        }
-        static void PrintWorkingIndicator(object parameters)
-        {
-            bool working = true;
-            int[] pp = (int[])parameters;
-            int top = Console.CursorTop - 1;
-            int left = pp[0];
-            int frameGap = pp[1];
-            char[] frames = new char[] { '|', '/', '-', '\\' };
-            while (working)
-            {
-                for (int i = 0; i < frames.Length; i++)
-                {
-                    Console.CursorLeft = left;
-                    Console.CursorTop = top;
-                    try
-                    {                       
-                        Console.Write(frames[i].ToString());
-                        Thread.Sleep(frameGap);
-                    }
-                    catch(ThreadAbortException ex)
-                    {
-                        Console.CursorLeft = left;
-                        Console.CursorTop = top;
-                        Console.WriteLine(" ");
-                        working = false;
-                        break;
-                    }
-                }
-            }
-        }
+        //static Thread PrintIndicatorAsync(int left, int frameGap)
+        //{
+        //    Thread indicatorThread = new Thread(new ParameterizedThreadStart(PrintWorkingIndicator));
+        //    int[] parametrs = new int[] { left, frameGap };
+        //    indicatorThread.Start(parametrs);
+        //    return indicatorThread;
+        //}
+        //static void PrintWorkingIndicator(object parameters)
+        //{
+        //    try
+        //    {
+        //        bool working = true;
+        //        int[] pp = (int[])parameters;
+        //        Console.CursorTop = Console.CursorTop - 1;
+        //        char[] frames = new char[] { '|', '/', '-', '\\' };
+        //        while (working)
+        //        {
+        //            for (int i = 0; i < frames.Length; i++)
+        //            {
+        //                Console.CursorLeft = pp[0];
+        //                Console.Write(frames[i].ToString());
+        //                Thread.Sleep(pp[1]);
+        //            }
+        //        }
+        //    }
+        //    catch
+        //    {
+        //        int[] pp = (int[])parameters;
+        //        Console.CursorLeft = pp[0];
+        //        Console.WriteLine(" ");                
+        //        auto.Set();
+        //        Thread.ResetAbort();            
+        //    }
+        //}
 
-        static void PlayPiece(Song piece, bool systemBeeper, Thread indicatorThread)
-        {
+        static void PlayPiece(Song piece, bool systemBeeper, int indicatorLeft)
+        {            
             NotationTranstalor.Note[] notes = null;
             try
             {
@@ -236,11 +237,42 @@ namespace Tempest
             }
             catch
             {
-                if (indicatorThread != null)
-                    indicatorThread.Abort();
                 PrintNotification("Не удалось воспроизвести мелодию из-за ошибки в записи", 6);
                 return;
             }
+            playing = true;
+            Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
+            playThread.Start(notes);         
+            int top = Console.CursorTop;
+            while (playing)
+            {
+                for (int i = 0; i < frames.Length; i++)
+                {
+                    if (playing == false)
+                        break;
+                    Console.CursorTop = top - 1;
+                    Console.CursorLeft = indicatorLeft;
+                    Console.WriteLine(frames[i].ToString());
+                    Thread.Sleep(50);
+                }
+            }
+            Console.CursorTop = top - 1;
+            Console.CursorLeft = indicatorLeft;
+            Console.WriteLine(" ");
+        }
+
+        /// <summary>
+        /// Starts the player in a separate thread and signals about its termination unsetting Program.playing
+        /// </summary>
+        /// <param name="piece">Song to play</param>
+        static void StartPlay(object piece)
+        {
+            if (piece == null)
+            {
+                playing = false;
+                return;
+            }
+            NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])piece;
             if (systemBeeper)
             {
                 foreach (NotationTranstalor.Note note in notes)
@@ -264,11 +296,8 @@ namespace Tempest
                 SoundPlayer player = new SoundPlayer(audioFileStream);
                 player.PlaySync();
                 audioFileStream.Close();
-            }
-            if (indicatorThread != null)
-            {
-                indicatorThread.Abort();               
-            }
+            }     
+            playing = false;
         }
 
         static void PrintNotification(string text, int cursorLeft)
