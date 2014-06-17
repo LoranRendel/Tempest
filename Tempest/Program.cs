@@ -11,15 +11,19 @@ namespace Tempest
 
     class Program
     {
+        static int linesAdded = -1;
         static string windowTitle = "Tempest";
+        static int plLinesCount = 0;
         static bool playing = false;
         static char[] frames = new char[] { '|', '/', '-', '\\' };
         static EventWaitHandle auto = new EventWaitHandle(false, EventResetMode.AutoReset);
         static string defaultPlayListPath = "songs.txt";
         static bool running = true;
         static bool systemBeeper = false;
-        static Song[] pieces;
-        static FileInfo playListFile = null;
+        static char[] playingIndicatorFrames = new char[] { '|', '/', '-', '\\' };
+        static string defaultPlaylistPath = "songs.txt";
+        static Song[] pieces = null;
+        static FileInfo playListFile = null;   
 
         [STAThread]
         static int Main()
@@ -110,11 +114,12 @@ namespace Tempest
             if (pieces == null)
             {
                 Console.CursorLeft = 6;
-                Console.WriteLine("Плейлист отсутствует или имеет неправильный формат");
+                PrintNotification("Плейлист отсутствует или имеет неправильный формат", 6);
                 return;
             }
             Console.CursorLeft = 4;
             Console.WriteLine("Для прослушивания доступны следующие мелодии:\n");
+            plLinesCount = 1 + pieces.Length;
             for (int i = 0; i < pieces.Length; i++)
             {
                 int lm = GetSongLength(pieces[i]);
@@ -124,7 +129,9 @@ namespace Tempest
                     Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
                 else
                     Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
+               
             }
+          
         }
 
         static void PlayerPrompt()
@@ -132,12 +139,14 @@ namespace Tempest
             string answer = string.Empty;
 
             string promptText = "Проиграть мелодию: ";
+            CountAddedLines();
             int left = 4;
             int leftForNotifications = 6;
 
             int pieceNumber = 0;
             Console.CursorLeft = left;
             Console.Write(promptText);
+
             answer = Console.ReadLine();
 
             if (int.TryParse(answer, out pieceNumber) && pieces != null && pieceNumber <= pieces.Length && pieceNumber > 0)
@@ -163,7 +172,10 @@ namespace Tempest
                     case "open":
                         byte result = OpenPlayList(null);
                         if (result == 3 || result == 2)
+                        {
                             PrintPlayList();
+                            linesAdded = -1;
+                        }
                         break;
                     case "reload":
                         if (Program.pieces == null)
@@ -173,12 +185,15 @@ namespace Tempest
                             OpenPlayList(Program.playListFile.FullName);
                             PrintNotification("Плейлист перезагружен", leftForNotifications);
                             PrintPlayList();
+                            linesAdded = -1;
+
                         }
                         break;
                     case "play":
                         Console.CursorLeft = left;
                         promptText = ">>> ";
                         Console.Write(promptText);
+                        CountAddedLines();
                         int cl = Console.CursorLeft;
                         Song enteredSong = new Song() { text = Console.ReadLine() };
                         PlayPiece(enteredSong, Program.systemBeeper, left + promptText.Length + enteredSong.text.Length + 1);
@@ -190,7 +205,6 @@ namespace Tempest
                         return;
                 }
             }
-
         }
 
         //static Thread PrintIndicatorAsync(int left, int frameGap)
@@ -256,11 +270,24 @@ namespace Tempest
                     Thread.Sleep(50);
                 }
             }
+            if (songNumber != -1)
+                HighLightSong(piece, songNumber, ConsoleColor.Gray);
             Console.CursorTop = top - 1;
             Console.CursorLeft = indicatorLeft;
             Console.WriteLine(" ");
         }
 
+        private static void HighLightSong(Song piece, int songNumber, ConsoleColor color)
+        {
+            int newTop = Console.CursorTop - 2 - linesAdded - (plLinesCount - songNumber);
+            if (newTop < 0)
+                return;
+            Console.CursorTop = newTop;
+            Console.CursorLeft = (songNumber.ToString() + ". ").Length + 6;
+            Console.ForegroundColor = color;
+            Console.WriteLine(piece.name);
+            Console.ForegroundColor = ConsoleColor.Gray;
+        }
         /// <summary>
         /// Starts the player in a separate thread and signals about its termination unsetting Program.playing
         /// </summary>
@@ -304,6 +331,15 @@ namespace Tempest
         {
             Console.CursorLeft = cursorLeft;
             Console.WriteLine(text);
+            CountAddedLines();
+        }
+
+        static void CountAddedLines()
+        {
+             linesAdded++;
+            int newTop = Console.CursorTop - linesAdded;
+            if (newTop < 0)
+                linesAdded = Console.CursorTop;
         }
 
         static int GetSongLength(Song s)
