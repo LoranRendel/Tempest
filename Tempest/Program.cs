@@ -300,7 +300,7 @@ namespace Tempest
             Console.WriteLine(text);
             CountAddedLines();
         }
-
+        //Count added lines
         static void CountAddedLines()
         {
              linesAdded++;
