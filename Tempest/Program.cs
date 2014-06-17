@@ -11,6 +11,9 @@ namespace Tempest
 
     class Program
     {
+        static ConsoleColor defaultForeground = Console.ForegroundColor;
+        static ConsoleColor defaultBackground = Console.BackgroundColor;
+        static int notificationLeft = 6;
         static int linesAdded = -1;
         static string windowTitle = "Tempest";
         static int plLinesCount = 0;
@@ -24,7 +27,7 @@ namespace Tempest
 
         [STAThread]
         static int Main()
-        {
+        {           
             ShowWelcomeScreen();
             OpenPlayList(defaultPlaylistPath);
             PrintPlayList();
@@ -101,8 +104,8 @@ namespace Tempest
             Console.BackgroundColor = ConsoleColor.White;
             Console.ForegroundColor = ConsoleColor.Black;
             Console.WriteLine(welcomeText);
-            Console.ForegroundColor = ConsoleColor.Gray;
-            Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = defaultForeground;
+            Console.BackgroundColor = defaultBackground;
             Console.Write("\n\n");
         }
 
@@ -110,8 +113,8 @@ namespace Tempest
         {
             if (pieces == null)
             {
-                Console.CursorLeft = 6;
-                PrintNotification("Плейлист отсутствует или имеет неправильный формат", 6);
+                Console.CursorLeft = notificationLeft;
+                PrintNotification("Плейлист отсутствует или имеет неправильный формат", notificationLeft);
                 return;
             }
             Console.CursorLeft = 4;
@@ -125,8 +128,7 @@ namespace Tempest
                 if (i != pieces.Length - 1)
                     Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
                 else
-                    Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
-               
+                    Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));               
             }
           
         }
@@ -136,19 +138,16 @@ namespace Tempest
             string answer = string.Empty;
 
             string promptText = "Проиграть мелодию: ";
-            CountAddedLines();
-            int left = 4;
-            int leftForNotifications = 6;
+           
+            int left = 4;            
 
             int pieceNumber = 0;
             Console.CursorLeft = left;
             Console.Write(promptText);
-
+            CountAddedLines();
             answer = Console.ReadLine();
-
             if (int.TryParse(answer, out pieceNumber) && pieces != null && pieceNumber <= pieces.Length && pieceNumber > 0)
             {
-
                 PlayPiece(pieces[pieceNumber - 1], Program.systemBeeper, left + promptText.Length + answer.Length + 1, pieceNumber);
             }
             else
@@ -158,12 +157,12 @@ namespace Tempest
                     case "s":
                     case "sysb":
                         systemBeeper = true;
-                        PrintNotification("Теперь звуки будут воспроизводиться через системный бипер", leftForNotifications);
+                        PrintNotification("Теперь звуки будут воспроизводиться через системный бипер", notificationLeft);
                         break;
                     case "w":
                     case "wav":
                         systemBeeper = false;
-                        PrintNotification("Теперь звуки будут воспроизводиться при помощи wav-файла", leftForNotifications);
+                        PrintNotification("Теперь звуки будут воспроизводиться при помощи wav-файла", notificationLeft);
                         break;
                     case "o":
                     case "open":
@@ -176,14 +175,13 @@ namespace Tempest
                         break;
                     case "reload":
                         if (Program.pieces == null)
-                            PrintNotification("Плейлист не был загружен, поэтому его невозможно перезагрузить", leftForNotifications);
+                            PrintNotification("Плейлист не был загружен, поэтому его невозможно перезагрузить", notificationLeft);
                         else
                         {
                             OpenPlayList(Program.playListFile.FullName);
-                            PrintNotification("Плейлист перезагружен", leftForNotifications);
+                            PrintNotification("Плейлист перезагружен", notificationLeft);
                             PrintPlayList();
                             linesAdded = -1;
-
                         }
                         break;
                     case "play":
@@ -200,7 +198,7 @@ namespace Tempest
                     case "quit":
                         running = false;
                         return;
-                }
+                }                 
             }
         }
 
@@ -233,7 +231,6 @@ namespace Tempest
                     Console.CursorLeft = indicatorLeft;
                     Console.WriteLine(playingIndicatorFrames[i].ToString());
                     Thread.Sleep(50);
-
                 }
             }
             if (songNumber != -1)
@@ -252,7 +249,7 @@ namespace Tempest
             Console.CursorLeft = (songNumber.ToString() + ". ").Length + 6;
             Console.ForegroundColor = color;
             Console.WriteLine(piece.name);
-            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.ForegroundColor = defaultForeground;
         }
         /// <summary>
         /// Starts the player in a separate thread and signals about its termination unsetting Program.playing
@@ -300,12 +297,11 @@ namespace Tempest
             Console.WriteLine(text);
             CountAddedLines();
         }
-        //Count added lines
+        
         static void CountAddedLines()
         {
-             linesAdded++;
-            int newTop = Console.CursorTop - linesAdded;
-            if (newTop < 0)
+            linesAdded++;           
+            if (Console.BufferHeight - linesAdded < 0)
                 linesAdded = Console.CursorTop;
         }
 
@@ -366,7 +362,6 @@ namespace Tempest
                 }
                 else
                     return null;
-
             }
             return pieces;
         }
