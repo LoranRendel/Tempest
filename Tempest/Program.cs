@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows.Forms;
 using System.Media;
 using System.Threading;
+using WaveGenerator;
 
 namespace Tempest
 {
@@ -275,18 +276,26 @@ namespace Tempest
             }
             else
             {
+                SoundGenerator sg = new SoundGenerator(22050, 16, 2);
+
+                
                 Wave audioFileGenerator = new Wave(22050);
                 foreach (NotationTranstalor.Note note in notes)
                 {
+                    sg.AddTone(note.Frequncy, note.Duration);
                     audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
                 }
-                MemoryStream audioFileStream = new MemoryStream();
-                audioFileGenerator.saveFile(audioFileStream);
-                audioFileStream.Position = 0;
-                SoundPlayer player = new SoundPlayer(audioFileStream);
+                FileStream audioFileStreamMy = new FileStream("my.wav", FileMode.Create);
+                FileStream audioFileStreamTheirs = new FileStream("their.wav", FileMode.Create);
+                sg.SaveTo(audioFileStreamMy);
+                audioFileGenerator.saveFile(audioFileStreamTheirs);
+              
+               //udioFileStreamMy.Position = 0;
+               // SoundPlayer player = new SoundPlayer(audioFileStreamMy);
                 //currPlayer = player;            
-                player.PlaySync();
-                audioFileStream.Close();
+                //player.PlaySync();
+                audioFileStreamMy.Close();
+                audioFileStreamTheirs.Close();
             }
             playing = false;
         }

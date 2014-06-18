@@ -19,14 +19,9 @@ namespace Tempest
             this.wave = new short[0];
         }
 
-        public static double fade(double compressor, double frequency, double position, double length, int sampleRate)
-        {
-            return Math.Exp(((compressor / sampleRate) * frequency * sampleRate * (position / sampleRate)) / (length / sampleRate));
-        }
-
         public void addWave(int freq, int len)
         {
-            short[] data = new short[(int)Math.Floor((double)sampleRate * len / 1000) + 1]; // Инициализируем массив 16 битных значений.
+            short[] data = new short[(int)Math.Floor(sampleRate * len / 1000d) + 1]; // Инициализируем массив 16 битных значений.
             double frequency = Math.PI * 2 * freq / sampleRate; // Рассчитываем требующуюся частоту.
 
             double shift;
@@ -40,15 +35,12 @@ namespace Tempest
                 shift = -Math.Asin(shift) + Math.PI;
             }
 
-            double fade;
             for (int index = 0; index <= sampleRate * len / 1000; index++)
             { // Перебираем его.
-                fade = (double)(data.Length - index) / data.Length;
-                fade = Wave.fade(-0.0015, frequency, index, 1.0, sampleRate);
-                data[index] = (short)(Math.Sin(index * frequency + shift) * short.MaxValue * fade); // Приводим уровень к амплитуде от 32767 до -32767.
+                data[index] = (short)(Math.Sin(index * frequency + shift) * short.MaxValue); // Приводим уровень к амплитуде от 32767 до -32767.
             }
 
-            int index1 = (int)Math.Floor((double)this.sampleRate * len / 1000) + 1;
+            int index1 = (int)Math.Floor(this.sampleRate * len / 1000d) + 1;
             this.lastSin = Math.Sin(index1 * frequency + shift);
             if (Math.Sin((index1 + 0.000000000001) * frequency + shift) > this.lastSin)
             {
