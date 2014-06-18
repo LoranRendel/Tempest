@@ -276,10 +276,10 @@ namespace Tempest
             }
             else
             {
-                SoundGenerator sg = new SoundGenerator(22050, 16, 1);
+                SoundGenerator sg = new SoundGenerator(8000, 16, 1);
 
                 
-                Wave audioFileGenerator = new Wave(22050);
+                Wave audioFileGenerator = new Wave(8000);
                 foreach (NotationTranstalor.Note note in notes)
                 {
                     sg.AddTone(note.Frequncy, note.Duration);
