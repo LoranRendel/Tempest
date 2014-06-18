@@ -276,7 +276,7 @@ namespace Tempest
             }
             else
             {
-                SoundGenerator sg = new SoundGenerator(22050, 16, 2);
+                SoundGenerator sg = new SoundGenerator(22050, 16, 1);
 
                 
                 Wave audioFileGenerator = new Wave(22050);
