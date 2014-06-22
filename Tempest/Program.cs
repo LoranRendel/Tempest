@@ -276,24 +276,24 @@ namespace Tempest
             }
             else
             {
-                SoundGenerator sg = new SoundGenerator(8000, 16, 1);
+                SoundGenerator sg = new SoundGenerator(8000, 8, 1);
 
                 
                 Wave audioFileGenerator = new Wave(8000);
                 foreach (NotationTranstalor.Note note in notes)
                 {
                     sg.AddTone(note.Frequncy, note.Duration);
-                    audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
+                   audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
                 }
                 FileStream audioFileStreamMy = new FileStream("my.wav", FileMode.Create);
                 FileStream audioFileStreamTheirs = new FileStream("their.wav", FileMode.Create);
                 sg.SaveTo(audioFileStreamMy);
                 audioFileGenerator.saveFile(audioFileStreamTheirs);
               
-               //udioFileStreamMy.Position = 0;
-               // SoundPlayer player = new SoundPlayer(audioFileStreamMy);
-                //currPlayer = player;            
-                //player.PlaySync();
+              // audioFileStreamMy.Position = 0;
+                //SoundPlayer player = new SoundPlayer(audioFileStreamMy);
+               //currPlayer = player;            
+               //player.PlaySync();
                 audioFileStreamMy.Close();
                 audioFileStreamTheirs.Close();
             }

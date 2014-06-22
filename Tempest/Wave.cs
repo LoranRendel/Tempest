@@ -21,7 +21,7 @@ namespace Tempest
 
         public void addWave(int freq, int len)
         {
-            short[] data = new short[(int)Math.Floor(sampleRate * len / 1000d) + 1]; // Инициализируем массив 16 битных значений.
+            short[] data = new short[(int)Math.Floor(sampleRate * len / 1000d)+ 1]; // Инициализируем массив 16 битных значений.
             double frequency = Math.PI * 2 * freq / sampleRate; // Рассчитываем требующуюся частоту.
 
             double shift;
