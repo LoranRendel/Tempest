@@ -276,7 +276,8 @@ namespace Tempest
             }
             else
             {
-                SoundGenerator sg = new SoundGenerator(8000, 8, 1);
+                FileStream audioFileStreamMy = new FileStream("my.wav", FileMode.Create);
+                SoundGenerator sg = new SoundGenerator(8000, 16, 1);
 
                 
                 Wave audioFileGenerator = new Wave(8000);
@@ -285,12 +286,12 @@ namespace Tempest
                     sg.AddTone(note.Frequncy, note.Duration);
                    audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
                 }
-                FileStream audioFileStreamMy = new FileStream("my.wav", FileMode.Create);
+              
                 FileStream audioFileStreamTheirs = new FileStream("their.wav", FileMode.Create);
                 sg.SaveTo(audioFileStreamMy);
                 audioFileGenerator.saveFile(audioFileStreamTheirs);
               
-              // audioFileStreamMy.Position = 0;
+             // audioFileStreamMy.Position = 0;
                 //SoundPlayer player = new SoundPlayer(audioFileStreamMy);
                //currPlayer = player;            
                //player.PlaySync();
