@@ -10,22 +10,22 @@ namespace Tempest
         short[] wave;
         double lastSin;
 
-        public Wave(int sampleRate)
+        public Wave()
         {
+            this.sampleRate = 8000;
             this.bitDepth = 16;
-            this.sampleRate = sampleRate;
-            this.lastSin = 0;
             this.directionUp = true;
             this.wave = new short[0];
         }
 
+
+
         public void addWave(int freq, int len)
         {
-            short[] data = new short[(int)Math.Floor(sampleRate * len / 1000d)+ 1]; // Инициализируем массив 16 битных значений.
-            double frequency = Math.PI * 2 * freq / sampleRate; // Рассчитываем требующуюся частоту.
-
-            double shift;
-            shift = this.lastSin;
+            double sin;
+            short[] data = new short[(int)Math.Floor((double)sampleRate * len / 1000)]; // Инициализируем массив 16 битных значений.
+            double frequency = Math.PI * 2 * freq / this.sampleRate; // Рассчитываем требующуюся частоту.
+            double shift = this.lastSin;
             if (this.directionUp)
             {
                 shift = Math.Asin(shift);
@@ -34,28 +34,57 @@ namespace Tempest
             {
                 shift = -Math.Asin(shift) + Math.PI;
             }
-
-            for (int index = 0; index <= sampleRate * len / 1000; index++)
-            { // Перебираем его.
-                data[index] = (short)(Math.Sin(index * frequency + shift) * short.MaxValue); // Приводим уровень к амплитуде от 32767 до -32767.
-            }
-
-            int index1 = (int)Math.Floor(this.sampleRate * len / 1000d) + 1;
-            this.lastSin = Math.Sin(index1 * frequency + shift);
-            if (Math.Sin((index1 + 0.000000000001) * frequency + shift) > this.lastSin)
+            int index;
+            if (this.bitDepth == 8)
             {
-                this.directionUp = true;
+                /*            for (int index = 0; index < this.sampleRate * len / 1000; index++) {
+                                sin = Math.Sin(index * frequency + shift);
+                                if (sin >= 0) {
+                                    sin = floor(sin * maxint) + maxint + 1;
+                                } else {
+                                    $sin = floor($sin * ($maxint + 1) + ($maxint + 1));
+                                }
+                                $this->string .= self::encodeNumber($sin, $this->bitDepth / 8);
+                            }*/
             }
             else
             {
+                int maxint = (int)Math.Pow(2, this.bitDepth - 1) - 1;
+                for (index = 0; index < this.sampleRate * len / 1000; index++)
+                {
+                    sin = Math.Sin(index * frequency + shift);
+                    if (sin >= 0)
+                    {
+                        sin = Math.Floor(sin * maxint);
+                    }
+                    else
+                    {
+                        sin = Math.Floor(sin * (maxint + 1));
+                    }
+                    data[index] = (short)sin;
+                    //$this->string .= self::encodeNumber($sin, $this->bitDepth / 8);
+                }
+            }
+            index = (int)Math.Floor((double)this.sampleRate * len / 1000);
+            this.lastSin = Math.Sin(index * frequency + shift);
+
+            double phase = (len / 1000 + shift / (2 * Math.PI) / freq) * freq;
+            phase -= (int)(phase);
+            if (phase >= 0.25 && phase < 0.75)
+            {
                 this.directionUp = false;
+            }
+            else
+            {
+                this.directionUp = true;
             }
 
             var z = new short[wave.Length + data.Length];
-            wave.CopyTo(z, 0);
+            this.wave.CopyTo(z, 0);
             data.CopyTo(z, wave.Length);
-            wave = z;
+            this.wave = z;
         }
+
 
         public void saveFile(Stream stream)
         {
@@ -81,6 +110,65 @@ namespace Tempest
                     stream.WriteByte(element); // И записываем их в поток.
                 }
             }
+        }
+
+        public void addWave000(int freq, int len)
+        {
+            short[] data = new short[(int)Math.Floor((double)sampleRate * len / 1000) + 1]; // Инициализируем массив 16 битных значений.
+            double frequency = Math.PI * 2 * freq / sampleRate; // Рассчитываем требующуюся частоту.
+
+            double shift;
+            shift = this.lastSin;
+            if (this.directionUp)
+            {
+                shift = Math.Asin(shift);
+            }
+            else
+            {
+                shift = -Math.Asin(shift) + Math.PI;
+            }
+
+            for (int index = 0; index <= sampleRate * len / 1000; index++)
+            { // Перебираем его.
+                data[index] = (short)(Math.Sin(index * frequency + shift) * short.MaxValue); // Приводим уровень к амплитуде от 32767 до -32767.
+            }
+
+            int index1 = (int)Math.Floor((double)this.sampleRate * len / 1000) + 1;
+            this.lastSin = Math.Sin(index1 * frequency + shift);
+            if (Math.Sin((index1 + 0.000000000001) * frequency + shift) > this.lastSin)
+            {
+                this.directionUp = true;
+            }
+            else
+            {
+                this.directionUp = false;
+            }
+
+            var z = new short[wave.Length + data.Length];
+            wave.CopyTo(z, 0);
+            data.CopyTo(z, wave.Length);
+            wave = z;
+        }
+
+        public static double Sine(int index, double frequency)
+        {
+            return Math.Sin(frequency * index);
+        }
+
+        private static double Saw(int index, double frequency)
+        {
+            return 2.0 * (index * frequency - Math.Floor(index * frequency)) - 1.0;
+        }
+
+        private static double Flat(int index, double frequency)
+        {
+            if (Math.Sin(frequency * index) > 0) return 1;
+            else return -1;
+        }
+
+        private static double Triangle(int index, double frequency)
+        {
+            return 2.0 * Math.Abs(2.0 * (index * frequency - Math.Floor(index * frequency + 0.5))) - 1.0;
         }
     }
 }

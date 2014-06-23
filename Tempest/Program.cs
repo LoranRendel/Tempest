@@ -24,11 +24,11 @@ namespace Tempest
         static char[] playingIndicatorFrames = new char[] { '|', '/', '-', '\\' };
         static string defaultPlaylistPath = "songs.txt";
         static Song[] pieces = null;
-        static FileInfo playListFile = null;   
+        static FileInfo playListFile = null;
 
         [STAThread]
         static int Main()
-        {           
+        {
             ShowWelcomeScreen();
             OpenPlayList(defaultPlaylistPath);
             PrintPlayList();
@@ -129,9 +129,9 @@ namespace Tempest
                 if (i != pieces.Length - 1)
                     Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
                 else
-                    Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));               
+                    Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
             }
-          
+
         }
 
         static void PlayerPrompt()
@@ -139,8 +139,8 @@ namespace Tempest
             string answer = string.Empty;
 
             string promptText = "Проиграть мелодию: ";
-           
-            int left = 4;            
+
+            int left = 4;
 
             int pieceNumber = 0;
             Console.CursorLeft = left;
@@ -199,7 +199,7 @@ namespace Tempest
                     case "quit":
                         running = false;
                         return;
-                }                 
+                }
             }
         }
 
@@ -264,6 +264,12 @@ namespace Tempest
                 return;
             }
             NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])piece;
+            StreamWriter mf = new StreamWriter("melody.txt");
+            foreach (NotationTranstalor.Note note in notes)
+            {
+                mf.WriteLine("{0} {1}", note.Frequncy, note.Duration);
+            }
+            mf.Close();
             if (systemBeeper)
             {
                 foreach (NotationTranstalor.Note note in notes)
@@ -276,27 +282,25 @@ namespace Tempest
             }
             else
             {
-                FileStream audioFileStreamMy = new FileStream("my.wav", FileMode.Create);
-                SoundGenerator sg = new SoundGenerator(8000, 16, 1);
-
-                
-                Wave audioFileGenerator = new Wave(8000);
+                FileStream audioFileStreamMy = new FileStream("18.wav", FileMode.Create);
+               // SoundGenerator sg = new SoundGenerator(8000, 16, 1, audioFileStreamMy);
+                Wave audioFileGenerator = new Wave();
                 foreach (NotationTranstalor.Note note in notes)
                 {
-                    sg.AddTone(note.Frequncy, note.Duration);
-                   audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
+                   // sg.AddTone(note.Frequncy, note.Duration);
+                    audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
                 }
-              
-                FileStream audioFileStreamTheirs = new FileStream("their.wav", FileMode.Create);
-                sg.SaveTo(audioFileStreamMy);
-                audioFileGenerator.saveFile(audioFileStreamTheirs);
-              
-             // audioFileStreamMy.Position = 0;
-                //SoundPlayer player = new SoundPlayer(audioFileStreamMy);
-               //currPlayer = player;            
-               //player.PlaySync();
+
+                // MemoryStream audioFileStreamTheirs = new MemoryStream();
+                //  sg.SaveTo(audioFileStreamMy);
+                audioFileGenerator.saveFile(audioFileStreamMy);
+
+                audioFileStreamMy.Position = 0;
+                SoundPlayer player = new SoundPlayer(audioFileStreamMy);
+                //  currPlayer = player;            
+                player.PlaySync();
                 audioFileStreamMy.Close();
-                audioFileStreamTheirs.Close();
+                // audioFileStreamTheirs.Close();
             }
             playing = false;
         }
@@ -307,10 +311,10 @@ namespace Tempest
             Console.WriteLine(text);
             CountAddedLines();
         }
-        
+
         static void CountAddedLines()
         {
-            linesAdded++;           
+            linesAdded++;
             if (Console.BufferHeight - linesAdded < 0)
                 linesAdded = Console.CursorTop;
         }
