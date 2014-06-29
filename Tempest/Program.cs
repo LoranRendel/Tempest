@@ -217,7 +217,8 @@ namespace Tempest
             }
             playing = true;
             Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
-            playThread.Start(notes);
+            object[] songWithName = new object[] { piece.name, notes };
+            playThread.Start(songWithName);
             int top = Console.CursorTop;
             //Highlight a song that is being played
             if (songNumber != -1)
@@ -263,7 +264,8 @@ namespace Tempest
                 playing = false;
                 return;
             }
-            NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])piece;
+            object[] songWithName = (object[])piece;
+            NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])songWithName[1];
             StreamWriter mf = new StreamWriter("melody.txt");
             foreach (NotationTranstalor.Note note in notes)
             {
@@ -281,26 +283,19 @@ namespace Tempest
                 }
             }
             else
-            {
-                FileStream audioFileStreamMy = new FileStream("18.wav", FileMode.Create);
-               // SoundGenerator sg = new SoundGenerator(8000, 16, 1, audioFileStreamMy);
-                Wave audioFileGenerator = new Wave();
-                foreach (NotationTranstalor.Note note in notes)
-                {
-                   // sg.AddTone(note.Frequncy, note.Duration);
-                    audioFileGenerator.addWave((int)note.Frequncy, note.Duration);
+            {               
+                FileStream audioFileStream = new FileStream("generated_file.wav", FileMode.Create);
+                SoundGenerator sg = new SoundGenerator(16000, 24, 1, null);
+                double[] startPhase = new double[]{0,0,0};               
+                for (int i = 0; i < notes.Length; i++)
+                {                  
+                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 0, 0, 1, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);
                 }
-
-                // MemoryStream audioFileStreamTheirs = new MemoryStream();
-                //  sg.SaveTo(audioFileStreamMy);
-                audioFileGenerator.saveFile(audioFileStreamMy);
-
-                audioFileStreamMy.Position = 0;
-                SoundPlayer player = new SoundPlayer(audioFileStreamMy);
-                //  currPlayer = player;            
+                sg.SaveTo(audioFileStream);
+                audioFileStream.Position = 0;
+                SoundPlayer player = new SoundPlayer(audioFileStream);
                 player.PlaySync();
-                audioFileStreamMy.Close();
-                // audioFileStreamTheirs.Close();
+                audioFileStream.Close();
             }
             playing = false;
         }
