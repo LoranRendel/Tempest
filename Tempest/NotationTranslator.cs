@@ -68,6 +68,7 @@ namespace Tempest
             if (!int.TryParse(tokens[0].Replace("TEMP", ""), out tempo))
                 throw new FormatException("Tempo was not specified correctly");
             double quarter = 60000d / tempo;
+            double whole = quarter * 4;
             double Ndur = 0;
             Note[] song = new Note[tokens.Length - 1];            
             if (tokens.Length < 2)
@@ -84,7 +85,8 @@ namespace Tempest
                 //Wrong note duration
                 if (!double.TryParse(note[1], out Ndur))
                     errorCount++;              
-                double duration = 4d / Ndur * quarter;
+               // double duration = 4d / Ndur * quarter;
+                double duration = whole / Ndur;
                 //Is it a pause?
                 if (note[0][0].ToString() == "P")                
                     song[i - 1] = new Note(0, (int)duration);               
@@ -99,7 +101,7 @@ namespace Tempest
                         continue;
                     }
                     double noteFreq = 16.352 * Math.Pow(2, GetKeyNumber(kn, on) / 12d);                   
-                    song[i - 1] = new Note(noteFreq, (int)duration);
+                    song[i - 1] = new Note(noteFreq, duration);
                 }              
             }
             return song;
@@ -108,7 +110,7 @@ namespace Tempest
         public struct Note
         {
             double _frequncy;
-            int _duration;
+            double _duration;
 
             public double Frequncy
             {
@@ -117,7 +119,7 @@ namespace Tempest
                     return _frequncy;
                 }
             }
-            public int Duration
+            public double Duration
             {
                 get
                 {
@@ -125,7 +127,7 @@ namespace Tempest
                 }
             }
 
-            public Note(double frequncy, int duration)
+            public Note(double frequncy, double duration)
             {
                 _frequncy = frequncy;
                 _duration = duration;

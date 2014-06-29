@@ -277,9 +277,9 @@ namespace Tempest
                 foreach (NotationTranstalor.Note note in notes)
                 {
                     if (note.Frequncy > 37)
-                        Console.Beep((int)note.Frequncy, note.Duration);
+                        Console.Beep((int)note.Frequncy, (int)note.Duration);
                     else
-                        System.Threading.Thread.Sleep(note.Duration);
+                        System.Threading.Thread.Sleep((int)note.Duration);
                 }
             }
             else
@@ -316,7 +316,7 @@ namespace Tempest
 
         static int GetSongLength(Song s)
         {
-            int result = 0;
+            double result = 0;
             NotationTranstalor.Note[] notes = null;
             try
             {
@@ -328,7 +328,7 @@ namespace Tempest
             }
             foreach (NotationTranstalor.Note n in notes)
                 result += n.Duration;
-            return result;
+            return (int)result;
         }
 
         static Song[] ReadPlayList(string fileText)
