@@ -200,11 +200,19 @@ namespace Tempest
                         running = false;
                         return;
                 }
+                int addLines_ = (promptText.Length+left+answer.Length) / Console.BufferWidth;            
+                    addLines_++;
+                for (int i = 1; i < addLines_; i++)
+                    CountAddedLines();
             }
         }
 
         static void PlayPiece(Song piece, bool systemBeeper, int indicatorLeft, int songNumber)
         {
+            int addLines_ = (indicatorLeft) / Console.BufferWidth;
+            addLines_++;
+            for (int lines = 1; lines < addLines_; lines++)
+                CountAddedLines();
             NotationTranstalor.Note[] notes = null;
             try
             {
@@ -230,16 +238,20 @@ namespace Tempest
                     if (playing == false)
                         break;
                     Console.CursorTop = top - 1;
-                    Console.CursorLeft = indicatorLeft;
+               
+                 
+                    Console.CursorLeft = (indicatorLeft > Console.BufferWidth)?indicatorLeft-Console.BufferWidth:indicatorLeft;
                     Console.WriteLine(playingIndicatorFrames[i].ToString());
                     Thread.Sleep(50);
                 }
             }
+            //Fix the multiline bug           
             if (songNumber != -1)
                 HighLightSong(piece, songNumber, ConsoleColor.Gray);
             Console.CursorTop = top - 1;
-            Console.CursorLeft = indicatorLeft;
+            Console.CursorLeft = (indicatorLeft > Console.BufferWidth) ? indicatorLeft - Console.BufferWidth : indicatorLeft;         
             Console.WriteLine(" ");
+      
         }
 
         private static void HighLightSong(Song piece, int songNumber, ConsoleColor color)
@@ -290,6 +302,7 @@ namespace Tempest
                 for (int i = 0; i < notes.Length; i++)
                 {                  
                     startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 0, 0, 1, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);
+                 //   startPhase = sg.AddSimpleTone(notes[i].Frequncy, notes[i].Duration, startPhase
                 }
                 sg.SaveTo(audioFileStream);
                 audioFileStream.Position = 0;
