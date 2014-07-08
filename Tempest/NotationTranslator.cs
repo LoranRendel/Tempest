@@ -7,11 +7,11 @@ namespace Tempest
 {
     static class NotationTranstalor
     {
-        private static Dictionary<string, int> generalKeyNumbers;   
+        private static Dictionary<string, int> generalKeyNumbers;
 
         static NotationTranstalor()
         {
-            Initialize();            
+            Initialize();
         }
 
         private static void Initialize()
@@ -34,10 +34,10 @@ namespace Tempest
             generalKeyNumbers.Add("A#", 10);
             generalKeyNumbers.Add("BB", 10);
             generalKeyNumbers.Add("B", 11);
-        }                
+        }
 
         private static int GetKeyNumber(string key, int octaveNumber)
-        {            
+        {
             int keyNumber;
             try
             {
@@ -46,7 +46,7 @@ namespace Tempest
             catch
             {
                 throw new ArgumentException("Wrong key name!");
-            }           
+            }
             return 12 * octaveNumber + keyNumber;
         }
 
@@ -60,9 +60,11 @@ namespace Tempest
             //NOTE: Note name + octave number. Example: C4, A5 etc.
             //DURATION: Denominator of 1/2, 1/4 etc. Example: 2, 4, 8, 16
             //Example: TEMP98 A4-16 F5-16 E5-16 D5-8
-            notation = notation.ToUpper();           
+            notation = notation.ToUpper();
+            RemoveMultipleSpaces(ref notation);
+            notation = notation.Trim(' ');
             string[] tokens = notation.Split(' ');
-            string[] note = new string[2];           
+            string[] note = new string[2];
             int errorCount = 0;
             int tempo;
             if (!int.TryParse(tokens[0].Replace("TEMP", ""), out tempo))
@@ -70,7 +72,7 @@ namespace Tempest
             double quarter = 60000d / tempo;
             double whole = quarter * 4;
             double Ndur = 0;
-            Note[] song = new Note[tokens.Length - 1];            
+            Note[] song = new Note[tokens.Length - 1];
             if (tokens.Length < 2)
                 return null;
             for (int i = 1; i < tokens.Length; i++)
@@ -84,12 +86,11 @@ namespace Tempest
                 }
                 //Wrong note duration
                 if (!double.TryParse(note[1], out Ndur))
-                    errorCount++;              
-               // double duration = 4d / Ndur * quarter;
+                    errorCount++;               
                 double duration = whole / Ndur;
                 //Is it a pause?
-                if (note[0][0].ToString() == "P")                
-                    song[i - 1] = new Note(0, (int)duration);               
+                if (note[0][0].ToString() == "P")
+                    song[i - 1] = new Note(0, duration);
                 else
                 {
                     string kn = note[0].Remove(note[0].Length - 1, 1);
@@ -100,12 +101,29 @@ namespace Tempest
                         errorCount++;
                         continue;
                     }
-                    double noteFreq = 16.352 * Math.Pow(2, GetKeyNumber(kn, on) / 12d);                   
+                    double noteFreq = 16.352 * Math.Pow(2, GetKeyNumber(kn, on) / 12d);
                     song[i - 1] = new Note(noteFreq, duration);
-                }              
+                }
             }
             return song;
-        }       
+        }
+
+        private static void RemoveMultipleSpaces(ref string text)
+        {
+            string result = string.Empty;
+            bool prevIsSpace = false;
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (prevIsSpace == true & text[i] == ' ')
+                    continue;
+                    result += text[i];
+                    if (text[i] == ' ')
+                        prevIsSpace = true;
+                    else
+                       prevIsSpace = false;              
+            }
+            text = result;
+        }
 
         public struct Note
         {
@@ -132,6 +150,24 @@ namespace Tempest
                 _frequncy = frequncy;
                 _duration = duration;
             }
-        }        
+        }
+
+        public struct Song
+        {
+            private string _name;
+            private string _author;
+            private string _text;
+
+            public string Name { get { return _name; } }
+            public string Author { get { return _author; } }
+            public string Text { get { return _text; } }
+
+            public Song(string name, string author, string text)
+            {
+                this._name = name;
+                this._author = author;
+                this._text = text;
+            }
+        }
     }
 }
