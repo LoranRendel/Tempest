@@ -27,10 +27,12 @@ namespace Tempest
         static string defaultPlaylistPath = "songs.txt";
         static NotationTranstalor.Song[] pieces = null;
         static FileInfo playListFile = null;
+        static bool cancelPressed = false;      
       
         [STAThread]
         static int Main()
-        {           
+        {
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             ShowWelcomeScreen();
             OpenPlayList(defaultPlaylistPath);
             PrintPlayList();
@@ -39,6 +41,12 @@ namespace Tempest
                 PlayerPrompt();
             }
             return 0;
+        }
+
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            e.Cancel = true;
+            cancelPressed = true;
         }
       
         /// <summary>
@@ -221,11 +229,12 @@ namespace Tempest
             }
             playing = true;
             Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
-            object[] songWithName = new object[] { piece.Name, notes };
+            object[] songWithName = new object[] { piece.Name, notes, GetSongLength(piece)};
+
             playThread.Start(songWithName);        
             Console.CursorLeft = promptLeft;
             Console.Write(piece.Name);
-            while (playing )
+            while (playing)
             {
                 for (int i = 0; i < playingIndicatorFrames.Length; i++)
                 {
@@ -243,15 +252,15 @@ namespace Tempest
         /// <summary>
         /// Starts the player in a separate thread and signals about its termination unsetting Program.playing
         /// </summary>
-        /// <param name="piece">Song to play</param>
-        static void StartPlay(object piece)
+        /// <param name="parameters">Song to play</param>
+        static void StartPlay(object parameters)
         {
-            if (piece == null)
+            if (parameters == null)
             {
                 playing = false;
                 return;
             }
-            object[] songWithName = (object[])piece;
+            object[] songWithName = (object[])parameters;
             NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])songWithName[1];     
             if (systemBeeper)
             {
@@ -287,12 +296,24 @@ namespace Tempest
                     file.Close();
                 }
                 audioFileStream.Position = 0;
-                SoundPlayer player = new SoundPlayer(audioFileStream);
-                player.PlaySync();                
+                SoundPlayer player = new SoundPlayer(audioFileStream);               
+                player.Play();
+                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+                sw.Start();
+                int sl = (int)songWithName[2]+20;
+                while (sl > sw.ElapsedMilliseconds)
+                {
+                    if (cancelPressed)
+                    {
+                        cancelPressed = false;
+                        player.Stop();
+                        break;
+                    }
+                }     
                 audioFileStream.Close();
             }
             playing = false;
-        }
+        }            
 
         static void PrintNotification(string text, int cursorLeft)
         {
