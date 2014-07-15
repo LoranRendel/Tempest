@@ -38,6 +38,7 @@ namespace Tempest
             PrintPlayList();
             while (running)
             {
+                GC.Collect();       
                 PlayerPrompt();
             }
             return 0;
@@ -76,7 +77,7 @@ namespace Tempest
                     pieces = ReadPlayList(reader.ReadToEnd());
                     reader.Close();
                     okayPressed = true;
-                }
+                }             
             }
             else
             {
@@ -145,7 +146,7 @@ namespace Tempest
         }
 
         static void PlayerPrompt()
-        {           
+        {            
             string answer = string.Empty;
             int pieceNumber = 0;
             Console.CursorLeft = promptLeft;
@@ -247,6 +248,7 @@ namespace Tempest
             }        
             Console.CursorLeft = promptLeft + piece.Name.Length;
             Console.WriteLine("  ");
+            cancelPressed = false;           
         }
         
         /// <summary>
@@ -261,11 +263,17 @@ namespace Tempest
                 return;
             }
             object[] songWithName = (object[])parameters;
-            NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])songWithName[1];     
+            NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])songWithName[1];
+            StreamWriter m = new StreamWriter("melody.txt");
+            foreach (NotationTranstalor.Note n in notes)
+                m.WriteLine("{0} {1}", (int)n.Frequncy, (int)n.Duration);
+            m.Close();
             if (systemBeeper)
             {
                 foreach (NotationTranstalor.Note note in notes)
                 {
+                    if (cancelPressed == true)                     
+                        break;                 
                     if (note.Frequncy > 37)
                         Console.Beep((int)note.Frequncy, (int)note.Duration);
                     else
@@ -275,13 +283,15 @@ namespace Tempest
             else
             {
                 MemoryStream audioFileStream = new MemoryStream();
-                SoundGenerator sg = new SoundGenerator(16000, 32, 1, null);
+                SoundGenerator sg = new SoundGenerator(22050, BitDepth.Bit16, 1, audioFileStream);
                 double[] startPhase = new double[] { 0, 0, 0};
                 for (int i = 0; i < notes.Length; i++)
                 {
-                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 0, 0, 1, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);                    
+                    if(notes[i].Frequncy == 0)
+                        startPhase = new double[] { 0, 0, 0 };
+                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 1, true, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);                    
                 }
-                sg.SaveTo(audioFileStream);
+                sg.Save();
                 if (saveToFile)
                 {
                     string fileHash = string.Empty;
@@ -304,15 +314,14 @@ namespace Tempest
                 while (sl > sw.ElapsedMilliseconds)
                 {
                     if (cancelPressed)
-                    {
-                        cancelPressed = false;
-                        player.Stop();
+                    {                        
+                        player.Stop();                       
                         break;
                     }
                 }     
                 audioFileStream.Close();
             }
-            playing = false;
+            playing = false;            
         }            
 
         static void PrintNotification(string text, int cursorLeft)
