@@ -78,7 +78,7 @@ namespace Tempest
             for (int i = 1; i < tokens.Length; i++)
             {
                 note = tokens[i].Split('-');
-                //If a note is empty, it is an error                       
+                //If a note is empty, it is an error
                 if (note[0] == string.Empty)
                 {
                     errorCount++;
@@ -86,7 +86,7 @@ namespace Tempest
                 }
                 //Wrong note duration
                 if (!double.TryParse(note[1], out Ndur))
-                    errorCount++;               
+                    errorCount++;
                 double duration = whole / Ndur;
                 //Is it a pause?
                 if (note[0][0].ToString() == "P")
@@ -120,7 +120,7 @@ namespace Tempest
                     if (text[i] == ' ')
                         prevIsSpace = true;
                     else
-                       prevIsSpace = false;              
+                       prevIsSpace = false;
             }
             text = result;
         }
