@@ -285,11 +285,14 @@ namespace Tempest
                 MemoryStream audioFileStream = new MemoryStream();
                 SoundGenerator sg = new SoundGenerator(22050, BitDepth.Bit16, 1, audioFileStream);
                 double[] startPhase = new double[] { 0, 0, 0};
+                uint sc = 0;
+                uint sampleIndex = 0;
                 for (int i = 0; i < notes.Length; i++)
                 {
                     if(notes[i].Frequncy == 0)
                         startPhase = new double[] { 0, 0, 0 };
-                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 1, true, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);                    
+                    sampleIndex += sc;
+                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 1, sampleIndex, out sc, true, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);                    
                 }
                 sg.Save();
                 if (saveToFile)
@@ -315,11 +318,14 @@ namespace Tempest
                 {
                     if (cancelPressed)
                     {                        
-                        player.Stop();                       
+                        player.Stop();
+                        sw.Stop();                        
                         break;
                     }
-                }     
+                }
+            
                 audioFileStream.Close();
+                audioFileStream.Dispose();
             }
             playing = false;            
         }            
