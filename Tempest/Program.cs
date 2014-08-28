@@ -28,8 +28,7 @@ namespace Tempest
         static NotationTranstalor.Song[] pieces = null;
         static FileInfo playListFile = null;
         static bool cancelPressed = false;
-      
-        [STAThread]
+
         static int Main()
         {
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
@@ -37,10 +36,7 @@ namespace Tempest
             OpenPlayList(defaultPlaylistPath);
             PrintPlayList();
             while (running)
-            {
-                GC.Collect();
                 PlayerPrompt();
-            }
             return 0;
         }
 
@@ -49,7 +45,7 @@ namespace Tempest
             e.Cancel = true;
             cancelPressed = true;
         }
-      
+
         /// <summary>
         /// Opens and loads a playlist
         /// </summary>
@@ -60,58 +56,41 @@ namespace Tempest
         /// [2] the playlist wasn't loaded and user pressed OK button;
         /// [3] the playlist was loaded and user pressed OK button.
         /// </returns>
-        private static byte OpenPlayList(string path)
+        private static bool OpenPlayList(string path)
         {
-            StreamReader reader = null;
-            bool okayPressed = false;
-            bool loaded = false;
+            bool result = false;
+            string answer = path;
             if (path == null)
             {
-                OpenFileDialog ofd = new OpenFileDialog();
-                ofd.Title = "Выберите файл со списком мелодий";
-                ofd.Multiselect = false;
-                if (ofd.ShowDialog() == DialogResult.OK)
-                {
-                    playListFile = new FileInfo(ofd.FileName);
-                    reader = playListFile.OpenText();
-                    pieces = ReadPlayList(reader.ReadToEnd());
-                    reader.Close();
-                    okayPressed = true;
-                }
+                Console.CursorLeft = promptLeft;
+                Console.WriteLine("Укажите путь к плейлисту:");
+                Console.CursorLeft = promptLeft;
+                Console.Write(subPromptText);
+                answer = Console.ReadLine();
             }
-            else
+            FileInfo playlistFile = null;           
+            try
             {
-                playListFile = new FileInfo(path);
-                if (playListFile.Exists)
-                {
-                    reader = playListFile.OpenText();
-                    pieces = ReadPlayList(reader.ReadToEnd());
-                    reader.Close();
-                }
-                else
-                    return OpenPlayList(null);
+                playlistFile = new FileInfo(answer);
             }
-            loaded = pieces != null;
-            byte result = 0;
-            if (loaded == false && okayPressed == false)
-                result = 0;
-            if (loaded == true && okayPressed == false)
-                result = 1;
-            if (loaded == false && okayPressed == true)
-                result = 2;
-            if (loaded == true && okayPressed == true)
-                result = 3;
-            if (loaded)
-                Console.Title = playListFile.FullName;
-            else
-                Console.Title = windowTitle;
+            catch (ArgumentException e)
+            {
+                return result;
+            }
+            if (playlistFile != null && playlistFile.Exists)
+            {
+                Program.playListFile = playlistFile;
+                StreamReader reader = new StreamReader(Program.playListFile.FullName);
+                pieces = ReadPlayList(reader.ReadToEnd());
+                result = true;
+            }
             return result;
         }
 
         static void ShowWelcomeScreen()
-        {
+        {            
             Console.Title = windowTitle;
-            string welcomeText = " Подобие музыкального проигрывателя v 0.0004";
+            string welcomeText = " Подобие музыкального проигрывателя v 0.0005";
             int screenCenter = Console.WindowWidth / 2;
             Console.CursorLeft = screenCenter - (welcomeText.Length / 2);
             Console.BackgroundColor = ConsoleColor.White;
@@ -171,11 +150,8 @@ namespace Tempest
                         break;
                     case "o":
                     case "open":
-                        byte result = OpenPlayList(null);
-                        if (result == 3 || result == 2)
-                        {
+                        if (OpenPlayList(null))
                             PrintPlayList();
-                        }
                         break;
                     case "reload":
                         if (Program.pieces == null)
@@ -229,7 +205,7 @@ namespace Tempest
             }
             playing = true;
             Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
-            object[] songWithName = new object[] { piece.Name, notes, GetSongLength(piece)};
+            object[] songWithName = new object[] { piece.Name, notes, GetSongLength(piece) };
 
             playThread.Start(songWithName);
             Console.CursorLeft = promptLeft;
@@ -240,16 +216,16 @@ namespace Tempest
                 {
                     if (playing == false)
                         break;
-                    Console.CursorLeft = promptLeft+piece.Name.Length;
+                    Console.CursorLeft = promptLeft + piece.Name.Length;
                     Console.Write(" " + playingIndicatorFrames[i].ToString());
                     Thread.Sleep(50);
                 }
-            }        
+            }
             Console.CursorLeft = promptLeft + piece.Name.Length;
             Console.WriteLine("  ");
             cancelPressed = false;
         }
-        
+
         /// <summary>
         /// Starts the player in a separate thread and signals about its termination unsetting Program.playing
         /// </summary>
@@ -283,15 +259,13 @@ namespace Tempest
             {
                 MemoryStream audioFileStream = new MemoryStream();
                 SoundGenerator sg = new SoundGenerator(9000, BitDepth.Bit16, 1, audioFileStream);
-                double[] startPhase = new double[] { 0, 0, 0};
-                uint sc = 0;
-                uint sampleIndex = 0;
+                double[] startPhase = new double[] { 0, 0, 0 };               
                 for (int i = 0; i < notes.Length; i++)
                 {
-                    if(notes[i].Frequncy == 0)
+                    if (notes[i].Frequncy == 0)
                         startPhase = new double[] { 0, 0, 0 };
-                    sampleIndex += sc;
-                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 1, sampleIndex, out sc, true, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);
+                   
+                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 1, true, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);
                 }
                 sg.Save();
                 if (saveToFile)
@@ -299,7 +273,7 @@ namespace Tempest
                     string fileHash = string.Empty;
                     using (var cp = new System.Security.Cryptography.SHA1CryptoServiceProvider())
                     {
-                      fileHash =  BitConverter.ToString(cp.ComputeHash(audioFileStream.ToArray()), 14);
+                        fileHash = BitConverter.ToString(cp.ComputeHash(audioFileStream.ToArray()), 14);
                     }
                     audioFileStream.Position = 0;
                     string fileName = string.Format("generated_{0}_{1}_{2}.wav", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString().Replace(':', '-'), fileHash);
@@ -312,7 +286,7 @@ namespace Tempest
                 player.Play();
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
                 sw.Start();
-                int sl = (int)songWithName[2]+20;
+                int sl = (int)songWithName[2] + 20;
                 while (sl > sw.ElapsedMilliseconds)
                 {
                     if (cancelPressed)
