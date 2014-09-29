@@ -10,7 +10,7 @@ using WaveGenerator;
 namespace Tempest
 {
 
-    class Program
+    partial class Program
     {
         static ConsoleColor defaultForeground = Console.ForegroundColor;
         static ConsoleColor defaultBackground = Console.BackgroundColor;
@@ -19,10 +19,13 @@ namespace Tempest
         static string subPromptText = ">>> ";
         static int promptLeft = 4;
         static int notificationLeft = 6;
+        static ushort sampleRate = 16000;
         static string windowTitle = "Tempest";
         static bool playing = false;
+        static bool playPrompt = false;
         static bool running = true;
         static bool systemBeeper = false;
+        static bool simple = false;        
         static char[] playingIndicatorFrames = new char[] { '|', '/', '-', '\\' };
         static string defaultPlaylistPath = "songs.txt";
         static NotationTranstalor.Song[] pieces = null;
@@ -40,12 +43,20 @@ namespace Tempest
             return 0;
         }
 
-        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        static void ShowWelcomeScreen()
         {
-            e.Cancel = true;
-            cancelPressed = true;
-        }
 
+            Console.Title = windowTitle;
+            string welcomeText = string.Format("Подобие музыкального проигрывателя v {0}", System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString());
+            int screenCenter = Console.WindowWidth / 2;
+            Console.CursorLeft = screenCenter - (welcomeText.Length / 2);
+            Console.BackgroundColor = ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.Black;
+            Console.WriteLine(welcomeText);
+            Console.ForegroundColor = defaultForeground;
+            Console.BackgroundColor = defaultBackground;
+            Console.Write("\n\n");
+        }
         /// <summary>
         /// Opens and loads a playlist
         /// </summary>
@@ -62,13 +73,12 @@ namespace Tempest
             string answer = path;
             if (path == null)
             {
-                Console.CursorLeft = promptLeft;
-                Console.WriteLine("Укажите путь к плейлисту:");
+                PrintNotification("Укажите путь к плейлисту:", promptLeft);
                 Console.CursorLeft = promptLeft;
                 Console.Write(subPromptText);
                 answer = Console.ReadLine();
             }
-            FileInfo playlistFile = null;           
+            FileInfo playlistFile = null;
             try
             {
                 playlistFile = new FileInfo(answer);
@@ -80,26 +90,65 @@ namespace Tempest
             if (playlistFile != null && playlistFile.Exists)
             {
                 Program.playListFile = playlistFile;
-                StreamReader reader = new StreamReader(Program.playListFile.FullName);
-                pieces = ReadPlayList(reader.ReadToEnd());
+                using (StreamReader reader = new StreamReader(Program.playListFile.FullName))
+                {
+                    pieces = ReadPlayList(reader.ReadToEnd());
+                }
                 result = true;
             }
             return result;
         }
 
-        static void ShowWelcomeScreen()
-        {            
-            Console.Title = windowTitle;
-            string welcomeText = " Подобие музыкального проигрывателя v 0.0005";
-            int screenCenter = Console.WindowWidth / 2;
-            Console.CursorLeft = screenCenter - (welcomeText.Length / 2);
-            Console.BackgroundColor = ConsoleColor.White;
-            Console.ForegroundColor = ConsoleColor.Black;
-            Console.WriteLine(welcomeText);
-            Console.ForegroundColor = defaultForeground;
-            Console.BackgroundColor = defaultBackground;
-            Console.Write("\n\n");
-        }
+        static NotationTranstalor.Song[] ReadPlayList(string fileText)
+        {
+            if (fileText == null)
+                throw new ArgumentNullException();
+            string[] splitted = fileText.Split('\n');
+            List<NotationTranstalor.Song> pieces = new List<NotationTranstalor.Song>();
+            // NotationTranstalor.Song[] pieces = new NotationTranstalor.Song[splitted.Length];
+            for (int i = 0; i < splitted.Length; i++)
+            {
+                //Is it a proper song?
+                splitted[i] = splitted[i].Replace('\r', '\0');
+                if (splitted[i].Contains("(") && splitted[i].Contains(")"))
+                {
+                    int open = 0, close = 0, openCount = 0, closeCount = 0;
+                    for (int j = 0; j < splitted[i].Length; j++)
+                    {
+                        if (splitted[i][j] == '(')
+                        {
+                            openCount++;
+                            open = j;
+                        }
+                        if (splitted[i][j] == ')')
+                        {
+                            closeCount++;
+                            close = j;
+                        }
+                    }
+                    string text, name;
+                    if (open < close && openCount == 1 && closeCount == 1)
+                    {
+                        text = splitted[i].Substring(open + 1, close - open - 1);
+                        name = splitted[i].Substring(0, open);
+                        try
+                        {
+                            NotationTranstalor.Song s = new NotationTranstalor.Song(name, string.Empty, text);
+                            pieces.Add(s);
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                        return null;
+                }
+                else
+                    return null;
+            }
+            return pieces.ToArray();
+        }        
 
         static void PrintPlayList()
         {
@@ -113,13 +162,10 @@ namespace Tempest
             Console.WriteLine("Для прослушивания доступны следующие мелодии:\n");
             for (int i = 0; i < pieces.Length; i++)
             {
-                int lm = GetSongLength(pieces[i]);
+                int lm = pieces[i].Length;
                 TimeSpan length = new TimeSpan(0, 0, 0, lm / 1000, lm - lm / 1000 * 1000);
                 Console.CursorLeft = 6;
-                if (i != pieces.Length - 1)
-                    Console.WriteLine("{0}. {1} {2};", i + 1, pieces[i].Name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
-                else
-                    Console.WriteLine("{0}. {1} {2}.\n", i + 1, pieces[i].Name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds));
+                Console.WriteLine("{0}. {1} {2}{3}", i + 1, pieces[i].Name, string.Format("({0:d2}:{1:d2})", length.Minutes, length.Seconds), (i != pieces.Length - 1) ? ";" : ".\n");
             }
         }
 
@@ -158,9 +204,18 @@ namespace Tempest
                             PrintNotification("Плейлист не был загружен, поэтому его невозможно перезагрузить", notificationLeft);
                         else
                         {
-                            OpenPlayList(Program.playListFile.FullName);
-                            PrintNotification("Плейлист перезагружен", notificationLeft);
-                            PrintPlayList();
+                            NotationTranstalor.Song[] temp = pieces;
+                            bool result = OpenPlayList(Program.playListFile.FullName);
+                            if (pieces != null && result)
+                            {
+                                PrintNotification("Плейлист перезагружен", notificationLeft);
+                                PrintPlayList();
+                            }
+                            else
+                            {
+                                PrintNotification("Не удалось перезагрузить плейлист, так как файл содержит ошибки или не существует.", notificationLeft);
+                                pieces = temp;
+                            }
                         }
                         break;
                     case "sp":
@@ -168,11 +223,9 @@ namespace Tempest
                         PrintPlayList();
                         break;
                     case "play":
-                        Console.CursorLeft = promptLeft;
-                        Console.Write(subPromptText);
-                        int cl = Console.CursorLeft;
-                        NotationTranstalor.Song enteredSong = new NotationTranstalor.Song("Untitled", string.Empty, Console.ReadLine());
-                        PlayPiece(enteredSong, Program.systemBeeper);
+                        playPrompt = true;
+                        while (playPrompt)
+                            PlayCommandPrompt();
                         break;
                     case "save":
                         saveToFile = true;
@@ -181,6 +234,14 @@ namespace Tempest
                     case "dnsave":
                         saveToFile = false;
                         PrintNotification("Сохранение результатов в файл отключено", notificationLeft);
+                        break;
+                    case "simple":
+                        simple = !simple;
+                        PrintNotification(simple.ToString(), notificationLeft);
+                        break;
+                    case "help":
+                    case "h":
+                        Console.WriteLine(new string(' ', notificationLeft)+manual.Replace("\r\n", "\r\n"+new string(' ', notificationLeft)));
                         break;
                     case "q":
                     case "exit":
@@ -191,23 +252,44 @@ namespace Tempest
             }
         }
 
-        static void PlayPiece(NotationTranstalor.Song piece, bool systemBeeper)
+        static void PlayCommandPrompt()
         {
-            NotationTranstalor.Note[] notes = null;
-            try
+            Console.CursorLeft = promptLeft;
+            Console.Write(subPromptText);
+            string[] possibleCommands = { "q", "qq" };
+            string answer = Console.ReadLine();
+            if (Array.IndexOf(possibleCommands, answer) != -1)
             {
-                notes = NotationTranstalor.TranslateNotation(piece.Text);
+                switch (answer.ToLower())
+                {
+                    case "q":
+                        playPrompt = false;
+                        break;
+                    case "qq":
+                        playPrompt = false;
+                        running = false;
+                        break;
+                }
             }
-            catch
+            else
             {
-                PrintNotification("Не удалось воспроизвести мелодию из-за ошибки в записи", 6);
-                return;
+                try
+                {
+                    NotationTranstalor.Song enteredSong = new NotationTranstalor.Song("Untitled", string.Empty, answer);
+                    PlayPiece(enteredSong, Program.systemBeeper);
+                }
+                catch
+                {
+                    PrintNotification("Не удалось воспроизвести мелодию из-за ошибки в записи.", notificationLeft);
+                }
             }
-            playing = true;
-            Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
-            object[] songWithName = new object[] { piece.Name, notes, GetSongLength(piece) };
+        }
 
-            playThread.Start(songWithName);
+        static void PlayPiece(NotationTranstalor.Song piece, bool systemBeeper)
+        {            
+            playing = true;            
+            Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
+            playThread.Start(piece);
             Console.CursorLeft = promptLeft;
             Console.Write(piece.Name);
             while (playing)
@@ -237,15 +319,16 @@ namespace Tempest
                 playing = false;
                 return;
             }
-            object[] songWithName = (object[])parameters;
-            NotationTranstalor.Note[] notes = (NotationTranstalor.Note[])songWithName[1];
-            StreamWriter m = new StreamWriter("melody.txt");
-            foreach (NotationTranstalor.Note n in notes)
-                m.WriteLine("{0} {1}", (int)n.Frequncy, (int)n.Duration);
-            m.Close();
+            NotationTranstalor.Song song = (NotationTranstalor.Song)parameters;       
+            using (StreamWriter m = new StreamWriter("melody.txt"))
+            {
+                foreach (NotationTranstalor.Note n in song.Notes)
+                    m.WriteLine("{0} {1}", (int)n.Frequncy, (int)n.Duration);
+                m.Close();
+            }
             if (systemBeeper)
             {
-                foreach (NotationTranstalor.Note note in notes)
+                foreach (NotationTranstalor.Note note in song.Notes)
                 {
                     if (cancelPressed == true)
                         break;
@@ -258,14 +341,18 @@ namespace Tempest
             else
             {
                 MemoryStream audioFileStream = new MemoryStream();
-                SoundGenerator sg = new SoundGenerator(9000, BitDepth.Bit16, 1, audioFileStream);
-                double[] startPhase = new double[] { 0, 0, 0 };               
-                for (int i = 0; i < notes.Length; i++)
+                WaveFile wavFile = new WaveFile(Program.sampleRate, BitDepth.Bit16, 1, audioFileStream);
+                SoundGenerator sg = new SoundGenerator(wavFile);
+               
+                double[] startPhase = new double[] { 0, 0, 0 };
+                for (int i = 0; i <  song.Notes.Length; i++)
                 {
-                    if (notes[i].Frequncy == 0)
+                    if (song.Notes[i].Frequncy == 0)
                         startPhase = new double[] { 0, 0, 0 };
-                   
-                    startPhase = sg.AddComplexTone(notes[i].Duration, startPhase, 1, true, notes[i].Frequncy, notes[i].Frequncy * 2, notes[i].Frequncy * 3);
+                    if (simple)
+                        startPhase[0] = sg.AddSimpleTone(song.Notes[i].Frequncy, song.Notes[i].Duration, startPhase[0], 1, true);
+                    else
+                        startPhase = sg.AddComplexTone(song.Notes[i].Duration, startPhase, 1, true, song.Notes[i].Frequncy, song.Notes[i].Frequncy * 2, song.Notes[i].Frequncy * 3);
                 }
                 sg.Save();
                 if (saveToFile)
@@ -286,7 +373,7 @@ namespace Tempest
                 player.Play();
                 System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
                 sw.Start();
-                int sl = (int)songWithName[2] + 20;
+                int sl = song.Length + 20;
                 while (sl > sw.ElapsedMilliseconds)
                 {
                     if (cancelPressed)
@@ -306,65 +393,12 @@ namespace Tempest
         {
             Console.CursorLeft = cursorLeft;
             Console.WriteLine(text);
-        }
+        }         
 
-        static int GetSongLength(NotationTranstalor.Song s)
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            double result = 0;
-            NotationTranstalor.Note[] notes = null;
-            try
-            {
-                notes = NotationTranstalor.TranslateNotation(s.Text);
-            }
-            catch
-            {
-                return 0;
-            }
-            foreach (NotationTranstalor.Note n in notes)
-                result += n.Duration;
-            return (int)result;
-        }
-
-        static NotationTranstalor.Song[] ReadPlayList(string fileText)
-        {
-            if (fileText == null)
-                throw new ArgumentNullException();
-            string[] splitted = fileText.Split('\n');
-            NotationTranstalor.Song[] pieces = new NotationTranstalor.Song[splitted.Length];
-            for (int i = 0; i < splitted.Length; i++)
-            {
-                //Is it a proper song?
-                splitted[i] = splitted[i].Replace('\r', '\0');
-                if (splitted[i].Contains("(") && splitted[i].Contains(")"))
-                {
-                    int open = 0, close = 0, openCount = 0, closeCount = 0;
-                    for (int j = 0; j < splitted[i].Length; j++)
-                    {
-                        if (splitted[i][j] == '(')
-                        {
-                            openCount++;
-                            open = j;
-                        }
-                        if (splitted[i][j] == ')')
-                        {
-                            closeCount++;
-                            close = j;
-                        }
-                    }
-                    string text, name;
-                    if (open < close && openCount == 1 && closeCount == 1)
-                    {
-                        text = splitted[i].Substring(open + 1, close - open - 1);
-                        name = splitted[i].Substring(0, open);
-                        pieces[i] = new NotationTranstalor.Song(name, string.Empty, text);
-                    }
-                    else
-                        return null;
-                }
-                else
-                    return null;
-            }
-            return pieces;
+            e.Cancel = true;
+            cancelPressed = true;
         }
     }
 }

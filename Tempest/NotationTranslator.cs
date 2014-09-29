@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 
 namespace Tempest
 {
-    static class NotationTranstalor
+    static partial class NotationTranstalor
     {
         private static Dictionary<string, int> generalKeyNumbers;
 
@@ -41,7 +42,7 @@ namespace Tempest
             int keyNumber;
             try
             {
-                keyNumber = generalKeyNumbers[key];
+                keyNumber = generalKeyNumbers[key.ToUpper()];
             }
             catch
             {
@@ -59,25 +60,28 @@ namespace Tempest
             //TEMP: TEMP + BPM. Example: TEMP120 - tempo is 120 beats per minute
             //NOTE: Note name + octave number. Example: C4, A5 etc.
             //DURATION: Denominator of 1/2, 1/4 etc. Example: 2, 4, 8, 16
-            //Example: TEMP98 A4-16 F5-16 E5-16 D5-8
+            //Example: TEMP98 A4-16 F5-16 E5-16 D5-8            
             notation = notation.ToUpper();
             RemoveMultipleSpaces(ref notation);
             notation = notation.Trim(' ');
+            Regex re = new Regex(@"(([CDEFGABcdefgab][Bb#]?\d+|[Pp])-\d+)");
+            MatchCollection mc = re.Matches(notation);
             string[] tokens = notation.Split(' ');
             string[] note = new string[2];
             int errorCount = 0;
+            int msLength = 0;
             int tempo;
             if (!int.TryParse(tokens[0].Replace("TEMP", ""), out tempo))
                 throw new FormatException("Tempo was not specified correctly");
             double quarter = 60000d / tempo;
-            double whole = quarter * 4;
+            double whole = quarter * 4;            
             double Ndur = 0;
             Note[] song = new Note[tokens.Length - 1];
             if (tokens.Length < 2)
                 return null;
             for (int i = 1; i < tokens.Length; i++)
             {
-                note = tokens[i].Split('-');
+                note = mc[i-1].Groups[1].Value.Split('-');
                 //If a note is empty, it is an error
                 if (note[0] == string.Empty)
                 {
@@ -101,8 +105,9 @@ namespace Tempest
                         errorCount++;
                         continue;
                     }
-                    double noteFreq = 16.352 * Math.Pow(2, GetKeyNumber(kn, on) / 12d);
+                    double noteFreq = 16.352 * Math.Pow(2, GetKeyNumber(kn, on) / 12d);                   
                     song[i - 1] = new Note(noteFreq, duration);
+                    msLength += (int)duration;
                 }
             }
             return song;
@@ -110,6 +115,8 @@ namespace Tempest
 
         private static void RemoveMultipleSpaces(ref string text)
         {
+            if (text == null)
+                return;
             string result = string.Empty;
             bool prevIsSpace = false;
             for (int i = 0; i < text.Length; i++)
@@ -123,51 +130,6 @@ namespace Tempest
                        prevIsSpace = false;
             }
             text = result;
-        }
-
-        public struct Note
-        {
-            double _frequncy;
-            double _duration;
-
-            public double Frequncy
-            {
-                get
-                {
-                    return _frequncy;
-                }
-            }
-            public double Duration
-            {
-                get
-                {
-                    return _duration;
-                }
-            }
-
-            public Note(double frequncy, double duration)
-            {
-                _frequncy = frequncy;
-                _duration = duration;
-            }
-        }
-
-        public struct Song
-        {
-            private string _name;
-            private string _author;
-            private string _text;
-
-            public string Name { get { return _name; } }
-            public string Author { get { return _author; } }
-            public string Text { get { return _text; } }
-
-            public Song(string name, string author, string text)
-            {
-                this._name = name;
-                this._author = author;
-                this._text = text;
-            }
         }
     }
 }

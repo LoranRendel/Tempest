@@ -66,7 +66,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NotationTranslator.cs" />
+    <Compile Include="NotationTranstalorStructs.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="ProgramHelp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
