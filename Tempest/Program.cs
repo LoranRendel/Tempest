@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using System.Media;
 using System.Threading;
 using WaveGenerator;
+using System.Text.RegularExpressions;
 
 namespace Tempest
 {
@@ -57,16 +58,7 @@ namespace Tempest
             Console.BackgroundColor = defaultBackground;
             Console.Write("\n\n");
         }
-        /// <summary>
-        /// Opens and loads a playlist
-        /// </summary>
-        /// <param name="path">A path to a playlist file, if it's null, an OpenFileDialogue is shown.</param>
-        /// <returns>Result of operation: 
-        /// [0] the playlist wasn't loaded and user didn't press OK button;
-        /// [1] the playlist was loaded and user didn't press OK button;
-        /// [2] the playlist wasn't loaded and user pressed OK button;
-        /// [3] the playlist was loaded and user pressed OK button.
-        /// </returns>
+            
         private static bool OpenPlayList(string path)
         {
             bool result = false;
@@ -287,13 +279,26 @@ namespace Tempest
 
         static void PlayPiece(NotationTranstalor.Song piece, bool systemBeeper)
         {            
-            playing = true;            
-            Thread playThread = new Thread(new ParameterizedThreadStart(StartPlay));
-            playThread.Start(piece);
+            playing = true;
+            Thread playThread = new Thread
+                (delegate()
+                    {                        
+                        if (systemBeeper)
+                            PlaySystemBeeper(ref piece);
+                        else
+                        {
+                            WaveFile audioFile = GenerateSongFile(ref piece);
+                            if (saveToFile)
+                                SaveGeneratedSongToFile(piece.Name, (MemoryStream)audioFile.File);
+                            PlayWaveFile(audioFile);
+                        }
+                        playing = false;
+                    }
+                );
+            playThread.Start();
             Console.CursorLeft = promptLeft;
             Console.Write(piece.Name);
-            while (playing)
-            {
+            while (playing)           
                 for (int i = 0; i < playingIndicatorFrames.Length; i++)
                 {
                     if (playing == false)
@@ -301,92 +306,82 @@ namespace Tempest
                     Console.CursorLeft = promptLeft + piece.Name.Length;
                     Console.Write(" " + playingIndicatorFrames[i].ToString());
                     Thread.Sleep(50);
-                }
-            }
+                }        
             Console.CursorLeft = promptLeft + piece.Name.Length;
             Console.WriteLine("  ");
             cancelPressed = false;
         }
 
-        /// <summary>
-        /// Starts the player in a separate thread and signals about its termination unsetting Program.playing
-        /// </summary>
-        /// <param name="parameters">Song to play</param>
-        static void StartPlay(object parameters)
+        private static void PlayWaveFile(WaveFile audioFile)
         {
-            if (parameters == null)
-            {
-                playing = false;
-                return;
-            }
-            NotationTranstalor.Song song = (NotationTranstalor.Song)parameters;       
-            using (StreamWriter m = new StreamWriter("melody.txt"))
-            {
-                foreach (NotationTranstalor.Note n in song.Notes)
-                    m.WriteLine("{0} {1}", (int)n.Frequncy, (int)n.Duration);
-                m.Close();
-            }
-            if (systemBeeper)
-            {
-                foreach (NotationTranstalor.Note note in song.Notes)
+            Stream audioFileStream = audioFile.File;
+            audioFileStream.Position = 0;
+            SoundPlayer player = new SoundPlayer(audioFileStream);
+            player.Play();
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();           
+            uint sl = audioFile.SampleCount / audioFile.SampleRate * 1000;
+            while (sl > sw.ElapsedMilliseconds)
+                if (cancelPressed)
                 {
-                    if (cancelPressed == true)
-                        break;
-                    if (note.Frequncy > 37)
-                        Console.Beep((int)note.Frequncy, (int)note.Duration);
-                    else
-                        System.Threading.Thread.Sleep((int)note.Duration);
+                    player.Stop();
+                    sw.Stop();
+                    break;
                 }
-            }
-            else
+            audioFileStream.Close();
+            audioFileStream.Dispose();            
+        }
+
+        private static void PlaySystemBeeper(ref NotationTranstalor.Song song)
+        {
+            foreach (NotationTranstalor.Note note in song.Notes)
             {
-                MemoryStream audioFileStream = new MemoryStream();
-                WaveFile wavFile = new WaveFile(Program.sampleRate, BitDepth.Bit16, 1, audioFileStream);
-                SoundGenerator sg = new SoundGenerator(wavFile);
-               
-                double[] startPhase = new double[] { 0, 0, 0 };
-                for (int i = 0; i <  song.Notes.Length; i++)
-                {
-                    if (song.Notes[i].Frequncy == 0)
-                        startPhase = new double[] { 0, 0, 0 };
-                    if (simple)
-                        startPhase[0] = sg.AddSimpleTone(song.Notes[i].Frequncy, song.Notes[i].Duration, startPhase[0], 1, true);
-                    else
-                        startPhase = sg.AddComplexTone(song.Notes[i].Duration, startPhase, 1, true, song.Notes[i].Frequncy, song.Notes[i].Frequncy * 2, song.Notes[i].Frequncy * 3);
-                }
-                sg.Save();
-                if (saveToFile)
-                {
-                    string fileHash = string.Empty;
-                    using (var cp = new System.Security.Cryptography.SHA1CryptoServiceProvider())
-                    {
-                        fileHash = BitConverter.ToString(cp.ComputeHash(audioFileStream.ToArray()), 14);
-                    }
-                    audioFileStream.Position = 0;
-                    string fileName = string.Format("generated_{0}_{1}_{2}.wav", DateTime.Now.ToLongDateString(), DateTime.Now.ToLongTimeString().Replace(':', '-'), fileHash);
-                    FileStream file = new FileStream(fileName, FileMode.Create);
-                    audioFileStream.WriteTo(file);
-                    file.Close();
-                }
-                audioFileStream.Position = 0;
-                SoundPlayer player = new SoundPlayer(audioFileStream);
-                player.Play();
-                System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-                sw.Start();
-                int sl = song.Length + 20;
-                while (sl > sw.ElapsedMilliseconds)
-                {
-                    if (cancelPressed)
-                    {
-                        player.Stop();
-                        sw.Stop();
-                        break;
-                    }
-                }
-                audioFileStream.Close();
-                audioFileStream.Dispose();
+                if (cancelPressed == true)
+                    break;
+                if (note.Frequncy > 37)
+                    Console.Beep((int)note.Frequncy, (int)note.Duration);
+                else
+                    System.Threading.Thread.Sleep((int)note.Duration);
+            }          
+        }
+
+        private static WaveFile GenerateSongFile(ref NotationTranstalor.Song song)
+        {            
+            MemoryStream audioFileStream = new MemoryStream();
+            WaveFile wavFile = new WaveFile(Program.sampleRate, BitDepth.Bit16, 1, audioFileStream);
+            SoundGenerator sg = new SoundGenerator(wavFile);       
+            double[] startPhase = new double[] { 0, 0, 0 };
+            for (int i = 0; i < song.Notes.Length; i++)
+            {
+                if (song.Notes[i].Frequncy == 0)
+                    startPhase = new double[] { 0, 0, 0 };
+                if (simple)
+                    startPhase[0] = sg.AddSimpleTone(song.Notes[i].Frequncy, song.Notes[i].Duration, startPhase[0], 1, true);
+                else
+                    startPhase = sg.AddComplexTone(song.Notes[i].Duration, startPhase, 1, true, song.Notes[i].Frequncy, song.Notes[i].Frequncy * 2, song.Notes[i].Frequncy * 3);
             }
-            playing = false;
+            sg.Save();
+            return wavFile;
+        }
+
+        private static void SaveGeneratedSongToFile(string fileName, MemoryStream audioFileStream)
+        {
+            audioFileStream.Position = 0;
+            Regex regex = new Regex("[\\\\/\":\\*\\?<>\\|]");
+            fileName = regex.Replace(fileName, " ");
+            string baseName = fileName;
+            fileName = string.Format("{0}.wav", fileName);           
+            int count = 1;
+            while (File.Exists(fileName))
+            {
+                fileName = string.Format("{0} ({1}).wav", baseName, count);
+                count++;
+            }
+            using (FileStream file = new FileStream(fileName, FileMode.Create))
+            {
+                audioFileStream.WriteTo(file);
+                file.Close();
+            }           
         }
 
         static void PrintNotification(string text, int cursorLeft)
