@@ -90,6 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="icon.ico" />
+    <Content Include="songs.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
