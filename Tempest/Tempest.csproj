@@ -67,12 +67,12 @@
   <ItemGroup>
     <Compile Include="NotationTranslator.cs" />
     <Compile Include="NotationTranstalorStructs.cs">
-	 <DependentUpon>NotationTranslator.cs</DependentUpon>
-	</Compile>
+      <DependentUpon>NotationTranslator.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="ProgramHelp.cs">
-	 <DependentUpon>Program.cs</DependentUpon>
-	</Compile>
+      <DependentUpon>Program.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
