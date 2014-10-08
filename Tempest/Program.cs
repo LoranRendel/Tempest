@@ -19,13 +19,13 @@ namespace Tempest
         static string subPromptText = ">>> ";
         static int promptLeft = 4;
         static int notificationLeft = 6;
-        static ushort sampleRate = 16000;
+        static ushort sampleRate = 44000;
         static string windowTitle = "Tempest";
         static bool playing = false;
         static bool playPrompt = false;
         static bool running = true;
         static bool systemBeeper = false;
-        static bool simple = false;
+        static bool simple = true;
         static char[] playingIndicatorFrames = new char[] { '|', '/', '-', '\\' };
         static string defaultPlaylistPath = "songs.txt";
         static NotationTranstalor.Song[] pieces = null;
@@ -329,8 +329,8 @@ namespace Tempest
             {
                 if (cancelPressed == true)
                     break;
-                if (note.Frequncy > 37)
-                    Console.Beep((int)note.Frequncy, (int)note.Duration);
+                if (note.Frequency > 37)
+                    Console.Beep((int)note.Frequency, (int)note.Duration);
                 else
                     System.Threading.Thread.Sleep((int)note.Duration);
             }
@@ -344,12 +344,12 @@ namespace Tempest
             double[] startPhase = new double[] { 0, 0, 0 };
             for (int i = 0; i < song.Notes.Length; i++)
             {
-                if (song.Notes[i].Frequncy == 0)
+                if (song.Notes[i].Frequency == 0)
                     startPhase = new double[] { 0, 0, 0 };
                 if (simple)
-                    startPhase[0] = sg.AddSimpleTone(song.Notes[i].Frequncy, song.Notes[i].Duration, startPhase[0], 1, true);
+                    startPhase[0] = sg.AddSimpleTone(song.Notes[i].Frequency, song.Notes[i].Duration, startPhase[0], 1, true);
                 else
-                    startPhase = sg.AddComplexTone(song.Notes[i].Duration, startPhase, 1, true, song.Notes[i].Frequncy, song.Notes[i].Frequncy * 2, song.Notes[i].Frequncy * 3);
+                    startPhase = sg.AddComplexTone(song.Notes[i].Duration, startPhase, 1, true, song.Notes[i].Frequency, song.Notes[i].Frequency * 2, song.Notes[i].Frequency * 3);
             }
             sg.Save();
             return wavFile;

@@ -7,16 +7,17 @@ namespace Tempest
 {
     static partial class NotationTranstalor
     {
+        static int halftones = 00;
         public struct Note
         {
-            double _frequncy;
+            double _frequency;
             double _duration;
 
-            public double Frequncy
+            public double Frequency
             {
                 get
                 {
-                    return _frequncy;
+                    return _frequency*Math.Pow(2, (double)NotationTranstalor.halftones/12);
                 }
             }
             public double Duration
@@ -29,7 +30,7 @@ namespace Tempest
 
             public Note(double frequncy, double duration)
             {
-                _frequncy = frequncy;
+                _frequency = frequncy;
                 _duration = duration;
             }
         }
