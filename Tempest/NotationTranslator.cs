@@ -97,7 +97,8 @@ namespace Tempest
                                             @"\d+(((T|\.+)|[X×]\d+))?" +
                                             @"(?=(\s|$))");
             MatchCollection correctNotes = noteExtractor.Matches(notation);
-            string[] tokens = notation.Split(' ');
+            notation = notation.Trim(' ');
+            string[] tokens = notation.Split(' ');          
             if (correctNotes.Count != tokens.Length - 1)
                 return null;
             int tempo = 0;
