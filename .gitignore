@@ -9,5 +9,5 @@
 *.suo
 *.user
 *.sln.docstates
-Tempest/bin/
+Tempest/bin/Debug/
 Tempest/obj/
