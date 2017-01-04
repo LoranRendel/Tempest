@@ -80,16 +80,17 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Simue">
-      <HintPath>..\..\Simue\Simue\bin\Release\Simue.dll</HintPath>
+    <Reference Include="Simue, Version=0.1.6213.39007, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\Simue\Simue\bin\x64\Debug\Simue.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
-    <Reference Include="WaveGenerator, Version=1.0.0.1, Culture=neutral, processorArchitecture=x86">
+    <Reference Include="WaveGenerator, Version=1.0.0.1, Culture=neutral, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\wavegenerator\WaveGenerator\bin\Release\WaveGenerator.dll</HintPath>
+      <HintPath>..\..\WaveGenerator\WaveGenerator\bin\x64\Debug\WaveGenerator.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
