@@ -11,3 +11,4 @@
 *.sln.docstates
 Tempest/bin/Debug/
 Tempest/obj/
+Tempest/bin/
