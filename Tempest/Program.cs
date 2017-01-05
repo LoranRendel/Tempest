@@ -36,12 +36,15 @@ namespace Tempest
 
         static int Main()
         {
+            var originalEncoding = Console.OutputEncoding;
+            Console.OutputEncoding = Encoding.GetEncoding(1251);
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             ShowWelcomeScreen();
             OpenPlayList(defaultPlaylistPath);
             PrintPlayList();
             while (running)
                 PlayerPrompt();
+            Console.OutputEncoding = originalEncoding;
             return 0;
         }
 
@@ -252,13 +255,21 @@ namespace Tempest
             {
                 try
                 {
-                    Song enteredSong = new Song
+                    var compRes = compiler.Parse(compiler.Tokenize(answer));
+                    if (compRes.Errors.Count == 0)
                     {
-                        Name = "Untitled",
-                        Author = string.Empty,
-                        Notes = compiler.Parse(compiler.Tokenize(answer)).Song.Notes
-                    };
-                    PlayPiece(enteredSong, Program.systemBeeper);
+                        Song enteredSong = new Song
+                        {
+                            Name = "Untitled",
+                            Author = string.Empty,
+                            Notes = compRes.Song.Notes
+                        };
+                        PlayPiece(enteredSong, Program.systemBeeper);
+                    }
+                    else
+                    {
+                        PrintNotification("Не удалось воспроизвести мелодию из-за ошибки в записи.", notificationLeft);
+                    }
                 }
                 catch
                 {
